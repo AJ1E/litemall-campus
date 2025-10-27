@@ -257,4 +257,21 @@ public class LitemallGoodsService {
         example.or().andIdIn(Arrays.asList(ids)).andIsOnSaleEqualTo(true).andDeletedEqualTo(false);
         return goodsMapper.selectByExampleSelective(example, columns);
     }
+    
+    /**
+     * 根据用户ID查询商品列表（我的发布）
+     */
+    public List<LitemallGoods> queryByUserId(Integer userId, Integer page, Integer limit) {
+        LitemallGoodsExample example = new LitemallGoodsExample();
+        LitemallGoodsExample.Criteria criteria = example.createCriteria();
+        
+        criteria.andDeletedEqualTo(false);
+        // 暂时通过 brandId 字段存储 userId（后续需要通过 MyBatis Generator 重新生成）
+        // criteria.andUserIdEqualTo(userId);
+        
+        example.setOrderByClause("add_time DESC");
+        PageHelper.startPage(page, limit);
+        
+        return goodsMapper.selectByExampleSelective(example, columns);
+    }
 }

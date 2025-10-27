@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.linlinjava.litemall.db.dao.SicauCourseMaterialMapper">
+    <resultMap id="BaseResultMap" type="org.linlinjava.litemall.db.domain.SicauCourseMaterial">
+        <id column="id" jdbcType="INTEGER" property="id" />
+        <result column="course_name" jdbcType="VARCHAR" property="courseName" />
+        <result column="book_name" jdbcType="VARCHAR" property="bookName" />
+        <result column="isbn" jdbcType="VARCHAR" property="isbn" />
+        <result column="semester" jdbcType="VARCHAR" property="semester" />
+        <result column="college" jdbcType="VARCHAR" property="college" />
+        <result column="add_time" jdbcType="TIMESTAMP" property="addTime" />
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+        <result column="deleted" jdbcType="BIT" property="deleted" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, course_name, book_name, isbn, semester, college, 
+        add_time, update_time, deleted
+    </sql>
+
+    <!-- 条件查询 -->
+    <select id="selectByCondition" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM sicau_course_material
+        WHERE deleted = 0
+        <if test="courseName != null and courseName != ''">
+            AND course_name LIKE CONCAT('%', #{courseName}, '%')
+        </if>
+        <if test="bookName != null and bookName != ''">
+            AND book_name LIKE CONCAT('%', #{bookName}, '%')
+        </if>
+        <if test="college != null and college != ''">
+            AND college = #{college}
+        </if>
+        ORDER BY course_name
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <!-- 统计数量 -->
+    <select id="countByCondition" resultType="int">
+        SELECT COUNT(*)
+        FROM sicau_course_material
+        WHERE deleted = 0
+        <if test="courseName != null and courseName != ''">
+            AND course_name LIKE CONCAT('%', #{courseName}, '%')
+        </if>
+        <if test="bookName != null and bookName != ''">
+            AND book_name LIKE CONCAT('%', #{bookName}, '%')
+        </if>
+        <if test="college != null and college != ''">
+            AND college = #{college}
+        </if>
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insertSelective" parameterType="org.linlinjava.litemall.db.domain.SicauCourseMaterial"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sicau_course_material
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="courseName != null">course_name,</if>
+            <if test="bookName != null">book_name,</if>
+            <if test="isbn != null">isbn,</if>
+            <if test="semester != null">semester,</if>
+            <if test="college != null">college,</if>
+            <if test="addTime != null">add_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="deleted != null">deleted,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="courseName != null">#{courseName},</if>
+            <if test="bookName != null">#{bookName},</if>
+            <if test="isbn != null">#{isbn},</if>
+            <if test="semester != null">#{semester},</if>
+            <if test="college != null">#{college},</if>
+            <if test="addTime != null">#{addTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="deleted != null">#{deleted},</if>
+        </trim>
+    </insert>
+
+    <!-- 更新 -->
+    <update id="updateByPrimaryKeySelective" parameterType="org.linlinjava.litemall.db.domain.SicauCourseMaterial">
+        UPDATE sicau_course_material
+        <set>
+            <if test="courseName != null">course_name = #{courseName},</if>
+            <if test="bookName != null">book_name = #{bookName},</if>
+            <if test="isbn != null">isbn = #{isbn},</if>
+            <if test="semester != null">semester = #{semester},</if>
+            <if test="college != null">college = #{college},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 逻辑删除 -->
+    <update id="logicalDeleteByPrimaryKey">
+        UPDATE sicau_course_material
+        SET deleted = 1, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+</mapper>

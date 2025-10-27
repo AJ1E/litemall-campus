@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.linlinjava.litemall.db.dao.SicauSensitiveWordMapper">
+    <resultMap id="BaseResultMap" type="org.linlinjava.litemall.db.domain.SicauSensitiveWord">
+        <id column="id" jdbcType="INTEGER" property="id" />
+        <result column="word" jdbcType="VARCHAR" property="word" />
+        <result column="type" jdbcType="TINYINT" property="type" />
+        <result column="add_time" jdbcType="TIMESTAMP" property="addTime" />
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+        <result column="deleted" jdbcType="BIT" property="deleted" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, word, type, add_time, update_time, deleted
+    </sql>
+
+    <!-- 条件查询 -->
+    <select id="selectByCondition" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM sicau_sensitive_words
+        WHERE deleted = 0
+        <if test="word != null and word != ''">
+            AND word LIKE CONCAT('%', #{word}, '%')
+        </if>
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+        ORDER BY add_time DESC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <!-- 统计数量 -->
+    <select id="countByCondition" resultType="int">
+        SELECT COUNT(*)
+        FROM sicau_sensitive_words
+        WHERE deleted = 0
+        <if test="word != null and word != ''">
+            AND word LIKE CONCAT('%', #{word}, '%')
+        </if>
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insertSelective" parameterType="org.linlinjava.litemall.db.domain.SicauSensitiveWord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sicau_sensitive_words
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="word != null">word,</if>
+            <if test="type != null">type,</if>
+            <if test="addTime != null">add_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="deleted != null">deleted,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="word != null">#{word},</if>
+            <if test="type != null">#{type},</if>
+            <if test="addTime != null">#{addTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="deleted != null">#{deleted},</if>
+        </trim>
+    </insert>
+
+    <!-- 更新 -->
+    <update id="updateByPrimaryKeySelective" parameterType="org.linlinjava.litemall.db.domain.SicauSensitiveWord">
+        UPDATE sicau_sensitive_words
+        <set>
+            <if test="word != null">word = #{word},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 逻辑删除 -->
+    <update id="logicalDeleteByPrimaryKey">
+        UPDATE sicau_sensitive_words
+        SET deleted = 1, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+</mapper>

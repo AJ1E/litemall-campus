@@ -5,6 +5,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.linlinjava.litemall.core.system.SystemConfig;
 import org.linlinjava.litemall.core.util.ResponseUtil;
+import org.linlinjava.litemall.core.util.SensitiveWordFilter;
 import org.linlinjava.litemall.core.validator.Order;
 import org.linlinjava.litemall.core.validator.Sort;
 import org.linlinjava.litemall.db.domain.*;
@@ -13,12 +14,10 @@ import org.linlinjava.litemall.wx.annotation.LoginUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +71,9 @@ public class WxGoodsController {
 
 	@Autowired
 	private LitemallGrouponRulesService rulesService;
+
+	@Autowired
+	private SensitiveWordFilter sensitiveWordFilter;
 
 	private final static ArrayBlockingQueue<Runnable> WORK_QUEUE = new ArrayBlockingQueue<>(9);
 
@@ -324,6 +326,108 @@ public class WxGoodsController {
 	public Object count() {
 		Integer goodsCount = goodsService.queryOnSale();
 		return ResponseUtil.ok(goodsCount);
+	}
+
+	/**
+	 * 发布二手商品
+	 * 
+	 * @param userId 用户ID（从登录态获取）
+	 * @param goods 商品信息
+	 * @return 发布结果
+	 */
+	@PostMapping("publish")
+	public Object publish(@LoginUser Integer userId, @RequestBody LitemallGoods goods) {
+		// 1. 校验用户登录
+		if (userId == null) {
+			return ResponseUtil.unlogin();
+		}
+		
+		// 2. 校验必填字段
+		if (StringUtils.isEmpty(goods.getName())) {
+			return ResponseUtil.badArgumentValue("商品名称不能为空");
+		}
+		if (goods.getCategoryId() == null) {
+			return ResponseUtil.badArgumentValue("请选择商品分类");
+		}
+		if (goods.getRetailPrice() == null) {
+			return ResponseUtil.badArgumentValue("请填写出售价格");
+		}
+		if (goods.getNewness() == null) {
+			return ResponseUtil.badArgumentValue("请选择新旧程度");
+		}
+		if (StringUtils.isEmpty(goods.getPicUrl())) {
+			return ResponseUtil.badArgumentValue("请上传商品图片");
+		}
+		
+		// 3. 敏感词检测
+		String textToCheck = goods.getName() + " " + 
+		                    (goods.getBrief() != null ? goods.getBrief() : "") + " " +
+		                    (goods.getDetail() != null ? goods.getDetail() : "");
+		
+		if (sensitiveWordFilter.containsSensitive(textToCheck)) {
+			List<String> sensitiveWords = sensitiveWordFilter.getSensitiveWords(textToCheck);
+			logger.warn("用户 " + userId + " 发布商品包含敏感词: " + sensitiveWords);
+			
+			return ResponseUtil.fail(600, "商品信息包含敏感词: " + String.join(", ", sensitiveWords));
+		}
+		
+		// 4. 设置商品基本信息
+		goods.setUserId(userId);
+		goods.setStatus((byte) 1); // 1-待审核
+		goods.setIsOnSale(false); // 默认不上架，需审核通过
+		goods.setAddTime(LocalDateTime.now());
+		goods.setUpdateTime(LocalDateTime.now());
+		goods.setDeleted(false);
+		
+		// 5. 生成商品编号
+		String goodsSn = generateGoodsSn();
+		goods.setGoodsSn(goodsSn);
+		
+		// 6. 保存商品
+		goodsService.add(goods);
+		
+		// 7. 返回成功结果
+		Map<String, Object> data = new HashMap<>();
+		data.put("id", goods.getId());
+		data.put("goodsSn", goods.getGoodsSn());
+		
+		return ResponseUtil.ok(data);
+	}
+	
+	/**
+	 * 生成商品编号
+	 */
+	private String generateGoodsSn() {
+		return "SH" + System.currentTimeMillis();
+	}
+	
+	/**
+	 * 我的发布
+	 * 
+	 * @param userId 用户ID
+	 * @param page 页码
+	 * @param limit 每页数量
+	 * @return 我发布的商品列表
+	 */
+	@GetMapping("myPublish")
+	public Object myPublish(@LoginUser Integer userId,
+	                       @RequestParam(defaultValue = "1") Integer page,
+	                       @RequestParam(defaultValue = "10") Integer limit) {
+		if (userId == null) {
+			return ResponseUtil.unlogin();
+		}
+		
+		List<LitemallGoods> goodsList = goodsService.queryByUserId(userId, page, limit);
+		PageInfo<LitemallGoods> pagedList = PageInfo.of(goodsList);
+		
+		Map<String, Object> data = new HashMap<>();
+		data.put("list", goodsList);
+		data.put("total", pagedList.getTotal());
+		data.put("page", pagedList.getPageNum());
+		data.put("limit", pagedList.getPageSize());
+		data.put("pages", pagedList.getPages());
+		
+		return ResponseUtil.ok(data);
 	}
 
 }
