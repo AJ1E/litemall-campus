@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.linlinjava.litemall.db.dao.SicauStudentAuthMapper">
+  
+  <!-- 结果映射 -->
+  <resultMap id="BaseResultMap" type="org.linlinjava.litemall.db.domain.SicauStudentAuth">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="user_id" jdbcType="INTEGER" property="userId" />
+    <result column="student_no" jdbcType="VARCHAR" property="studentNo" />
+    <result column="real_name" jdbcType="VARCHAR" property="realName" />
+    <result column="id_card" jdbcType="VARCHAR" property="idCard" />
+    <result column="phone" jdbcType="VARCHAR" property="phone" />
+    <result column="college" jdbcType="VARCHAR" property="college" />
+    <result column="major" jdbcType="VARCHAR" property="major" />
+    <result column="student_card_url" jdbcType="VARCHAR" property="studentCardUrl" />
+    <result column="status" jdbcType="TINYINT" property="status" />
+    <result column="fail_reason" jdbcType="VARCHAR" property="failReason" />
+    <result column="submit_time" jdbcType="TIMESTAMP" property="submitTime" />
+    <result column="audit_time" jdbcType="TIMESTAMP" property="auditTime" />
+    <result column="audit_admin_id" jdbcType="INTEGER" property="auditAdminId" />
+    <result column="auditor" jdbcType="VARCHAR" property="auditor" />
+    <result column="add_time" jdbcType="TIMESTAMP" property="addTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="deleted" jdbcType="BIT" property="deleted" />
+  </resultMap>
+  
+  <!-- 基础列列表 -->
+  <sql id="Base_Column_List">
+    id, user_id, student_no, real_name, id_card, phone, college, major, student_card_url,
+    `status`, fail_reason, submit_time, audit_time, audit_admin_id, auditor, 
+    add_time, update_time, deleted
+  </sql>
+  
+  <!-- 根据主键查询 -->
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_student_auth
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  
+  <!-- 根据用户ID查询 -->
+  <select id="selectByUserId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_student_auth
+    where user_id = #{userId,jdbcType=INTEGER}
+    and deleted = 0
+  </select>
+  
+  <!-- 根据学号查询（学号已加密） -->
+  <select id="selectByStudentNo" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_student_auth
+    where student_no = #{studentNo,jdbcType=VARCHAR}
+    and deleted = 0
+    limit 1
+  </select>
+  
+  <!-- 根据状态查询列表 -->
+  <select id="selectByStatus" parameterType="java.lang.Byte" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_student_auth
+    where `status` = #{status,jdbcType=TINYINT}
+    and deleted = 0
+    order by submit_time asc
+  </select>
+  
+  <!-- 根据主键删除 -->
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
+    delete from sicau_student_auth
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  
+  <!-- 插入所有字段 -->
+  <insert id="insert" parameterType="org.linlinjava.litemall.db.domain.SicauStudentAuth">
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into sicau_student_auth (id, user_id, student_no, 
+      real_name, id_card, phone, college, major, student_card_url,
+      `status`, fail_reason, submit_time, 
+      audit_time, audit_admin_id, auditor, add_time, 
+      update_time, deleted)
+    values (#{id,jdbcType=INTEGER}, #{userId,jdbcType=INTEGER}, #{studentNo,jdbcType=VARCHAR}, 
+      #{realName,jdbcType=VARCHAR}, #{idCard,jdbcType=VARCHAR}, #{phone,jdbcType=VARCHAR}, 
+      #{college,jdbcType=VARCHAR}, #{major,jdbcType=VARCHAR}, #{studentCardUrl,jdbcType=VARCHAR},
+      #{status,jdbcType=TINYINT}, #{failReason,jdbcType=VARCHAR}, #{submitTime,jdbcType=TIMESTAMP}, 
+      #{auditTime,jdbcType=TIMESTAMP}, #{auditAdminId,jdbcType=INTEGER}, #{auditor,jdbcType=VARCHAR}, #{addTime,jdbcType=TIMESTAMP}, 
+      #{updateTime,jdbcType=TIMESTAMP}, #{deleted,jdbcType=BIT})
+  </insert>
+  
+  <!-- 插入非空字段 -->
+  <insert id="insertSelective" parameterType="org.linlinjava.litemall.db.domain.SicauStudentAuth">
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into sicau_student_auth
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="studentNo != null">
+        student_no,
+      </if>
+      <if test="realName != null">
+        real_name,
+      </if>
+      <if test="idCard != null">
+        id_card,
+      </if>
+      <if test="phone != null">
+        phone,
+      </if>
+      <if test="college != null">
+        college,
+      </if>
+      <if test="major != null">
+        major,
+      </if>
+      <if test="studentCardUrl != null">
+        student_card_url,
+      </if>
+      <if test="status != null">
+        `status`,
+      </if>
+      <if test="failReason != null">
+        fail_reason,
+      </if>
+      <if test="submitTime != null">
+        submit_time,
+      </if>
+      <if test="auditTime != null">
+        audit_time,
+      </if>
+      <if test="auditAdminId != null">
+        audit_admin_id,
+      </if>
+      <if test="auditor != null">
+        auditor,
+      </if>
+      <if test="addTime != null">
+        add_time,
+      </if>
+      <if test="updateTime != null">
+        update_time,
+      </if>
+      <if test="deleted != null">
+        deleted,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="userId != null">
+        #{userId,jdbcType=INTEGER},
+      </if>
+      <if test="studentNo != null">
+        #{studentNo,jdbcType=VARCHAR},
+      </if>
+      <if test="realName != null">
+        #{realName,jdbcType=VARCHAR},
+      </if>
+      <if test="idCard != null">
+        #{idCard,jdbcType=VARCHAR},
+      </if>
+      <if test="phone != null">
+        #{phone,jdbcType=VARCHAR},
+      </if>
+      <if test="college != null">
+        #{college,jdbcType=VARCHAR},
+      </if>
+      <if test="major != null">
+        #{major,jdbcType=VARCHAR},
+      </if>
+      <if test="studentCardUrl != null">
+        #{studentCardUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=TINYINT},
+      </if>
+      <if test="failReason != null">
+        #{failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="submitTime != null">
+        #{submitTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="auditTime != null">
+        #{auditTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="auditAdminId != null">
+        #{auditAdminId,jdbcType=INTEGER},
+      </if>
+      <if test="auditor != null">
+        #{auditor,jdbcType=VARCHAR},
+      </if>
+      <if test="addTime != null">
+        #{addTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deleted != null">
+        #{deleted,jdbcType=BIT},
+      </if>
+    </trim>
+  </insert>
+  
+  <!-- 根据主键更新非空字段 -->
+  <update id="updateByPrimaryKeySelective" parameterType="org.linlinjava.litemall.db.domain.SicauStudentAuth">
+    update sicau_student_auth
+    <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=INTEGER},
+      </if>
+      <if test="studentNo != null">
+        student_no = #{studentNo,jdbcType=VARCHAR},
+      </if>
+      <if test="realName != null">
+        real_name = #{realName,jdbcType=VARCHAR},
+      </if>
+      <if test="idCard != null">
+        id_card = #{idCard,jdbcType=VARCHAR},
+      </if>
+      <if test="phone != null">
+        phone = #{phone,jdbcType=VARCHAR},
+      </if>
+      <if test="college != null">
+        college = #{college,jdbcType=VARCHAR},
+      </if>
+      <if test="major != null">
+        major = #{major,jdbcType=VARCHAR},
+      </if>
+      <if test="studentCardUrl != null">
+        student_card_url = #{studentCardUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        `status` = #{status,jdbcType=TINYINT},
+      </if>
+      <if test="failReason != null">
+        fail_reason = #{failReason,jdbcType=VARCHAR},
+      </if>
+      <if test="submitTime != null">
+        submit_time = #{submitTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="auditTime != null">
+        audit_time = #{auditTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="auditAdminId != null">
+        audit_admin_id = #{auditAdminId,jdbcType=INTEGER},
+      </if>
+      <if test="auditor != null">
+        auditor = #{auditor,jdbcType=VARCHAR},
+      </if>
+      <if test="addTime != null">
+        add_time = #{addTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        update_time = #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deleted != null">
+        deleted = #{deleted,jdbcType=BIT},
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  
+  <!-- 根据主键更新所有字段 -->
+  <update id="updateByPrimaryKey" parameterType="org.linlinjava.litemall.db.domain.SicauStudentAuth">
+    update sicau_student_auth
+    set user_id = #{userId,jdbcType=INTEGER},
+      student_no = #{studentNo,jdbcType=VARCHAR},
+      real_name = #{realName,jdbcType=VARCHAR},
+      id_card = #{idCard,jdbcType=VARCHAR},
+      phone = #{phone,jdbcType=VARCHAR},
+      college = #{college,jdbcType=VARCHAR},
+      major = #{major,jdbcType=VARCHAR},
+      student_card_url = #{studentCardUrl,jdbcType=VARCHAR},
+      `status` = #{status,jdbcType=TINYINT},
+      fail_reason = #{failReason,jdbcType=VARCHAR},
+      submit_time = #{submitTime,jdbcType=TIMESTAMP},
+      audit_time = #{auditTime,jdbcType=TIMESTAMP},
+      audit_admin_id = #{auditAdminId,jdbcType=INTEGER},
+      auditor = #{auditor,jdbcType=VARCHAR},
+      add_time = #{addTime,jdbcType=TIMESTAMP},
+      update_time = #{updateTime,jdbcType=TIMESTAMP},
+      deleted = #{deleted,jdbcType=BIT}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  
+</mapper>

@@ -816,6 +816,7 @@ CREATE TABLE `litemall_user` (
   `weixin_openid` varchar(63) NOT NULL DEFAULT '' COMMENT '微信登录openid',
   `session_key` varchar(100) NOT NULL DEFAULT '' COMMENT '微信登录会话KEY',
   `status` tinyint(3) NOT NULL DEFAULT '0' COMMENT '0 可用, 1 禁用, 2 注销',
+  `credit_score` int(11) NOT NULL DEFAULT '100' COMMENT '信用积分，默认100分',
   `add_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   `deleted` tinyint(1) DEFAULT '0' COMMENT '逻辑删除',
@@ -833,5 +834,39 @@ CREATE TABLE `litemall_user` (
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+--
+-- Table structure for table `sicau_student_auth`
+--
+
+DROP TABLE IF EXISTS `sicau_student_auth`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sicau_student_auth` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL COMMENT '用户ID，关联litemall_user.id',
+  `student_no` varchar(255) NOT NULL COMMENT '学号（AES-256-GCM加密）',
+  `real_name` varchar(255) NOT NULL COMMENT '真实姓名（AES-256-GCM加密）',
+  `id_card` varchar(255) DEFAULT NULL COMMENT '身份证号（AES-256-GCM加密）',
+  `phone` varchar(255) DEFAULT NULL COMMENT '手机号（AES-256-GCM加密）',
+  `college` varchar(100) DEFAULT NULL COMMENT '学院',
+  `major` varchar(100) DEFAULT NULL COMMENT '专业',
+  `student_card_url` varchar(255) DEFAULT NULL COMMENT '学生证照片URL',
+  `status` tinyint(3) NOT NULL DEFAULT '0' COMMENT '认证状态：0-未认证，1-审核中，2-已认证，3-认证失败',
+  `fail_reason` varchar(255) DEFAULT NULL COMMENT '认证失败原因',
+  `submit_time` datetime DEFAULT NULL COMMENT '提交认证时间',
+  `audit_time` datetime DEFAULT NULL COMMENT '审核时间',
+  `audit_admin_id` int(11) DEFAULT NULL COMMENT '审核管理员ID',
+  `auditor` varchar(63) DEFAULT NULL COMMENT '审核人',
+  `add_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `deleted` tinyint(1) DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_id` (`user_id`),
+  UNIQUE KEY `uk_student_no` (`student_no`),
+  KEY `idx_status` (`status`),
+  KEY `idx_submit_time` (`submit_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='川农学生认证表';
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 -- Dump completed on 2019-12-16 23:12:57

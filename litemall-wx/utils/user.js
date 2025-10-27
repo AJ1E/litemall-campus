@@ -57,6 +57,8 @@ function loginByWeixin(userInfo) {
           //存储用户信息
           wx.setStorageSync('userInfo', res.data.userInfo);
           wx.setStorageSync('token', res.data.token);
+          wx.setStorageSync('authStatus', res.data.authStatus); // 保存认证状态
+          wx.setStorageSync('creditScore', res.data.creditScore); // 保存信用积分
 
           resolve(res);
         } else {

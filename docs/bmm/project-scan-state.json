@@ -1,0 +1,52 @@
+{
+  "workflow_version": "1.2.0",
+  "scan_level": "deep",
+  "scan_date": "2025-10-27T03:15:00Z",
+  "project_type": "multi-module-monorepo",
+  "primary_languages": ["Java", "JavaScript", "TypeScript"],
+  "frameworks": ["Spring Boot", "Vue.js", "WeChat Mini Program"],
+  "completed_steps": [
+    "project_structure_detection",
+    "technology_stack_analysis",
+    "module_discovery",
+    "api_endpoint_extraction",
+    "database_schema_analysis",
+    "component_inventory",
+    "documentation_generation"
+  ],
+  "modules_analyzed": {
+    "backend": [
+      "litemall-core",
+      "litemall-db",
+      "litemall-admin-api",
+      "litemall-wx-api",
+      "litemall-all"
+    ],
+    "frontend": [
+      "litemall-admin",
+      "litemall-vue"
+    ],
+    "miniprogram": [
+      "litemall-wx",
+      "renard-wx"
+    ]
+  },
+  "statistics": {
+    "database_tables": 34,
+    "rest_controllers": 62,
+    "service_classes": 39,
+    "vue_components": 54,
+    "api_endpoints_estimated": 200
+  },
+  "outputs_generated": [
+    "index.md",
+    "project-overview.md",
+    "architecture.md",
+    "source-tree-analysis.md",
+    "api-contracts-backend.md",
+    "data-models.md",
+    "development-guide.md"
+  ],
+  "scan_duration_seconds": 180,
+  "status": "completed"
+}

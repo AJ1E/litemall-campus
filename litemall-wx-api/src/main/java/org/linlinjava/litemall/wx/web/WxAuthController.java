@@ -11,10 +11,14 @@ import org.linlinjava.litemall.core.util.CharUtil;
 import org.linlinjava.litemall.core.util.JacksonUtil;
 import org.linlinjava.litemall.core.util.RegexUtil;
 import org.linlinjava.litemall.core.util.ResponseUtil;
+import org.linlinjava.litemall.core.util.AesUtil;
+import org.linlinjava.litemall.core.service.CreditScoreService;
 import org.linlinjava.litemall.core.util.bcrypt.BCryptPasswordEncoder;
 import org.linlinjava.litemall.db.domain.LitemallUser;
+import org.linlinjava.litemall.db.domain.SicauStudentAuth;
 import org.linlinjava.litemall.db.service.CouponAssignService;
 import org.linlinjava.litemall.db.service.LitemallUserService;
+import org.linlinjava.litemall.db.service.SicauStudentAuthService;
 import org.linlinjava.litemall.wx.annotation.LoginUser;
 import org.linlinjava.litemall.wx.dto.UserInfo;
 import org.linlinjava.litemall.wx.dto.UserToken;
@@ -55,6 +59,15 @@ public class WxAuthController {
 
     @Autowired
     private CouponAssignService couponAssignService;
+
+    @Autowired
+    private SicauStudentAuthService studentAuthService;
+
+    @Autowired
+    private AesUtil aesUtil;
+
+    @Autowired
+    private CreditScoreService creditScoreService;
 
     /**
      * 账号登录
@@ -147,6 +160,7 @@ public class WxAuthController {
             user.setGender(userInfo.getGender());
             user.setUserLevel((byte) 0);
             user.setStatus((byte) 0);
+            user.setCreditScore(100); // 新用户默认信用积分100
             user.setLastLoginTime(LocalDateTime.now());
             user.setLastLoginIp(IpUtil.getIpAddr(request));
             user.setSessionKey(sessionKey);
@@ -167,9 +181,14 @@ public class WxAuthController {
         // token
         String token = UserTokenManager.generateToken(user.getId());
 
+        // 查询认证状态
+        int authStatus = studentAuthService.getAuthStatus(user.getId());
+
         Map<Object, Object> result = new HashMap<Object, Object>();
         result.put("token", token);
         result.put("userInfo", userInfo);
+        result.put("authStatus", authStatus); // 认证状态：0-未认证，1-审核中，2-已认证，3-认证失败
+        result.put("creditScore", user.getCreditScore()); // 信用积分
         return ResponseUtil.ok(result);
     }
 
@@ -541,6 +560,12 @@ public class WxAuthController {
         return ResponseUtil.ok();
     }
 
+    /**
+     * 获取用户基本信息（增强版，包含信用等级和认证状态）
+     * 
+     * @param userId 用户ID
+     * @return 用户完整信息
+     */
     @GetMapping("info")
     public Object info(@LoginUser Integer userId) {
         if (userId == null) {
@@ -548,12 +573,181 @@ public class WxAuthController {
         }
 
         LitemallUser user = userService.findById(userId);
-        Map<Object, Object> data = new HashMap<Object, Object>();
+        if (user == null) {
+            return ResponseUtil.fail(404, "用户不存在");
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        
+        // 基本信息
+        data.put("userId", user.getId());
         data.put("nickName", user.getNickname());
         data.put("avatar", user.getAvatar());
         data.put("gender", user.getGender());
         data.put("mobile", user.getMobile());
+        
+        // 信用信息
+        int creditScore = user.getCreditScore() != null ? user.getCreditScore() : 100;
+        CreditScoreService.CreditLevel level = creditScoreService.getCreditLevel(creditScore);
+        data.put("creditScore", creditScore);
+        data.put("creditLevel", level.getLevel());
+        data.put("creditLevelName", level.getName());
+        
+        // 学号认证状态
+        int authStatus = studentAuthService.getAuthStatus(userId);
+        data.put("authStatus", authStatus); // 0-未认证, 1-审核中, 2-已认证, 3-已拒绝
+        
+        // 如果已认证，返回学院和专业（不返回学号和姓名，保护隐私）
+        if (authStatus == 2) {
+            SicauStudentAuth auth = studentAuthService.findByUserId(userId);
+            if (auth != null) {
+                data.put("college", auth.getCollege());
+                data.put("major", auth.getMajor());
+            }
+        }
 
         return ResponseUtil.ok(data);
+    }
+
+    /**
+     * 绑定学号（学号实名认证）
+     * 
+     * @param userId 用户ID
+     * @param body 请求体包含：studentNo, realName, college, major, studentCardUrl
+     * @return 提交结果
+     */
+    @PostMapping("bindStudentNo")
+    public Object bindStudentNo(@LoginUser Integer userId, @RequestBody String body) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        String studentNo = JacksonUtil.parseString(body, "studentNo");
+        String realName = JacksonUtil.parseString(body, "realName");
+        String college = JacksonUtil.parseString(body, "college");
+        String major = JacksonUtil.parseString(body, "major");
+        String studentCardUrl = JacksonUtil.parseString(body, "studentCardUrl");
+
+        // 参数验证
+        if (StringUtils.isEmpty(studentNo) || !studentNo.matches("\\d{12}")) {
+            return ResponseUtil.fail(402, "学号格式错误，应为12位数字");
+        }
+        if (StringUtils.isEmpty(realName) || realName.length() < 2 || realName.length() > 10) {
+            return ResponseUtil.fail(402, "真实姓名长度应为2-10个字");
+        }
+        if (StringUtils.isEmpty(college) || StringUtils.isEmpty(major)) {
+            return ResponseUtil.fail(401, "学院和专业不能为空");
+        }
+        if (StringUtils.isEmpty(studentCardUrl)) {
+            return ResponseUtil.fail(401, "请上传学生证照片");
+        }
+
+        try {
+            // 检查是否已提交过
+            SicauStudentAuth existing = studentAuthService.findByUserId(userId);
+            if (existing != null) {
+                if (existing.getStatus() == 0 || existing.getStatus() == 1) {
+                    return ResponseUtil.fail(601, "您已提交认证申请，请等待审核");
+                } else if (existing.getStatus() == 2) {
+                    return ResponseUtil.fail(602, "您已通过认证，无需重复提交");
+                }
+                // status == 3 时允许重新提交
+            }
+
+            // AES 加密学号和姓名
+            String encryptedStudentNo = aesUtil.encrypt(studentNo);
+            String encryptedRealName = aesUtil.encrypt(realName);
+
+            // 检查学号是否已被使用
+            SicauStudentAuth duplicate = studentAuthService.findByStudentNo(encryptedStudentNo);
+            if (duplicate != null && !duplicate.getUserId().equals(userId)) {
+                return ResponseUtil.fail(603, "该学号已被其他用户绑定");
+            }
+
+            // 创建或更新认证记录
+            SicauStudentAuth auth = existing != null ? existing : new SicauStudentAuth();
+            auth.setUserId(userId);
+            auth.setStudentNo(encryptedStudentNo);
+            auth.setRealName(encryptedRealName);
+            auth.setCollege(college);
+            auth.setMajor(major);
+            auth.setStudentCardUrl(studentCardUrl);
+            auth.setStatus((byte) 1); // 审核中
+            auth.setSubmitTime(LocalDateTime.now());
+            auth.setFailReason(null);
+
+            if (existing != null) {
+                studentAuthService.updateById(auth);
+            } else {
+                studentAuthService.add(auth);
+            }
+
+            return ResponseUtil.ok("提交成功，请等待审核");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseUtil.fail(500, "提交失败，请稍后重试");
+        }
+    }
+
+    /**
+     * 查询学号认证状态
+     * 
+     * @param userId 用户ID
+     * @return 认证状态信息
+     */
+    @GetMapping("authStatus")
+    public Object getAuthStatus(@LoginUser Integer userId) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        SicauStudentAuth auth = studentAuthService.findByUserId(userId);
+        if (auth == null) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("status", -1); // 未提交
+            return ResponseUtil.ok(data);
+        }
+
+        try {
+            // 解密学号和姓名
+            String studentNo = aesUtil.decrypt(auth.getStudentNo());
+            String realName = aesUtil.decrypt(auth.getRealName());
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("status", auth.getStatus());
+            data.put("studentNo", studentNo);
+            data.put("realName", realName);
+            data.put("college", auth.getCollege());
+            data.put("major", auth.getMajor());
+            data.put("studentCardUrl", auth.getStudentCardUrl());
+            data.put("submitTime", auth.getSubmitTime());
+            data.put("failReason", auth.getFailReason());
+
+            return ResponseUtil.ok(data);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseUtil.fail(500, "查询失败");
+        }
+    }
+
+    /**
+     * 获取用户信用等级详情
+     * 
+     * @param userId 用户ID
+     * @return 信用等级信息
+     */
+    @GetMapping("creditDetail")
+    public Object getCreditDetail(@LoginUser Integer userId) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        Map<String, Object> creditInfo = creditScoreService.getCreditInfo(userId);
+        if (creditInfo == null) {
+            return ResponseUtil.fail(404, "用户不存在");
+        }
+
+        return ResponseUtil.ok(creditInfo);
     }
 }
