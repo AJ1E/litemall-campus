@@ -121,8 +121,16 @@ public class ResponseUtil {
         return fail(401, "参数不对");
     }
 
+    public static Object badArgument(String msg) {
+        return fail(401, msg);
+    }
+
     public static Object badArgumentValue() {
         return fail(402, "参数值不对");
+    }
+
+    public static Object badArgumentValue(String msg) {
+        return fail(402, msg);
     }
 
     public static Object unlogin() {

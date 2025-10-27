@@ -43,9 +43,9 @@
 
         <!--数据库连接信息-->
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
-                        connectionURL="jdbc:mysql://127.0.0.1:3306/litemall?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC&amp;verifyServerCertificate=false&amp;useSSL=false&amp;nullCatalogMeansCurrent=true"
-                        userId="litemall"
-                        password="litemall123456"/>
+                        connectionURL="jdbc:mysql://gateway01.eu-central-1.prod.aws.tidbcloud.com:4000/litemall?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=Asia/Shanghai&amp;allowPublicKeyRetrieval=true&amp;useSSL=true&amp;requireSSL=true&amp;nullCatalogMeansCurrent=true"
+                        userId="3gw7gessje9T2Cv.root"
+                        password="IWe7WiolqqAMoZ4z"/>
 
         <javaTypeResolver>
             <property name="useJSR310Types" value="true"/>

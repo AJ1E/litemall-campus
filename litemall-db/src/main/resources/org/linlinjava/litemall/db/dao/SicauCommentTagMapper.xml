@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.linlinjava.litemall.db.dao.SicauCommentTagMapper">
+  
+  <!-- 结果映射 -->
+  <resultMap id="BaseResultMap" type="org.linlinjava.litemall.db.domain.SicauCommentTag">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="role" jdbcType="TINYINT" property="role" />
+    <result column="tag_name" jdbcType="VARCHAR" property="tagName" />
+    <result column="sort_order" jdbcType="INTEGER" property="sortOrder" />
+    <result column="add_time" jdbcType="TIMESTAMP" property="addTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="deleted" jdbcType="BIT" property="deleted" />
+  </resultMap>
+  
+  <!-- 基础列列表 -->
+  <sql id="Base_Column_List">
+    id, `role`, tag_name, sort_order, add_time, update_time, deleted
+  </sql>
+  
+  <!-- 根据主键查询 -->
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment_tags
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  
+  <!-- 根据角色查询标签列表 -->
+  <select id="selectByRole" parameterType="java.lang.Byte" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment_tags
+    where `role` = #{role,jdbcType=TINYINT}
+    and deleted = 0
+    order by sort_order asc
+  </select>
+  
+  <!-- 查询所有标签列表 -->
+  <select id="selectAll" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment_tags
+    where deleted = 0
+    order by `role` asc, sort_order asc
+  </select>
+  
+  <!-- 根据主键删除 -->
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
+    delete from sicau_comment_tags
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  
+  <!-- 插入所有字段 -->
+  <insert id="insert" parameterType="org.linlinjava.litemall.db.domain.SicauCommentTag">
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into sicau_comment_tags (id, `role`, tag_name, 
+      sort_order, add_time, update_time, 
+      deleted)
+    values (#{id,jdbcType=INTEGER}, #{role,jdbcType=TINYINT}, #{tagName,jdbcType=VARCHAR}, 
+      #{sortOrder,jdbcType=INTEGER}, #{addTime,jdbcType=TIMESTAMP}, #{updateTime,jdbcType=TIMESTAMP}, 
+      #{deleted,jdbcType=BIT})
+  </insert>
+  
+  <!-- 插入非空字段 -->
+  <insert id="insertSelective" parameterType="org.linlinjava.litemall.db.domain.SicauCommentTag">
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into sicau_comment_tags
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="role != null">
+        `role`,
+      </if>
+      <if test="tagName != null">
+        tag_name,
+      </if>
+      <if test="sortOrder != null">
+        sort_order,
+      </if>
+      <if test="addTime != null">
+        add_time,
+      </if>
+      <if test="updateTime != null">
+        update_time,
+      </if>
+      <if test="deleted != null">
+        deleted,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="role != null">
+        #{role,jdbcType=TINYINT},
+      </if>
+      <if test="tagName != null">
+        #{tagName,jdbcType=VARCHAR},
+      </if>
+      <if test="sortOrder != null">
+        #{sortOrder,jdbcType=INTEGER},
+      </if>
+      <if test="addTime != null">
+        #{addTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deleted != null">
+        #{deleted,jdbcType=BIT},
+      </if>
+    </trim>
+  </insert>
+  
+  <!-- 根据主键更新非空字段 -->
+  <update id="updateByPrimaryKeySelective" parameterType="org.linlinjava.litemall.db.domain.SicauCommentTag">
+    update sicau_comment_tags
+    <set>
+      <if test="role != null">
+        `role` = #{role,jdbcType=TINYINT},
+      </if>
+      <if test="tagName != null">
+        tag_name = #{tagName,jdbcType=VARCHAR},
+      </if>
+      <if test="sortOrder != null">
+        sort_order = #{sortOrder,jdbcType=INTEGER},
+      </if>
+      <if test="addTime != null">
+        add_time = #{addTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        update_time = #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deleted != null">
+        deleted = #{deleted,jdbcType=BIT},
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  
+  <!-- 根据主键更新所有字段 -->
+  <update id="updateByPrimaryKey" parameterType="org.linlinjava.litemall.db.domain.SicauCommentTag">
+    update sicau_comment_tags
+    set `role` = #{role,jdbcType=TINYINT},
+      tag_name = #{tagName,jdbcType=VARCHAR},
+      sort_order = #{sortOrder,jdbcType=INTEGER},
+      add_time = #{addTime,jdbcType=TIMESTAMP},
+      update_time = #{updateTime,jdbcType=TIMESTAMP},
+      deleted = #{deleted,jdbcType=BIT}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  
+</mapper>

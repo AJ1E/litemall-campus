@@ -260,4 +260,34 @@ public class LitemallOrderService {
         data.put("pages", list1.getPages());
         return data;
     }
+    
+    /**
+     * Epic 3: 根据订单状态查询订单列表
+     * 
+     * @param status 订单状态
+     * @return 订单列表
+     */
+    public List<LitemallOrder> queryByStatus(Short status) {
+        LitemallOrderExample example = new LitemallOrderExample();
+        example.or().andOrderStatusEqualTo(status).andDeletedEqualTo(false);
+        return litemallOrderMapper.selectByExample(example);
+    }
+    
+    /**
+     * Epic 3: 根据卖家ID查询订单
+     * TODO: 需要 MyBatis Generator 重新生成 LitemallOrderExample 以支持 sellerId 字段
+     * 
+     * @param sellerId 卖家ID
+     * @param page 页码
+     * @param limit 每页数量
+     * @return 订单列表
+     */
+    public List<LitemallOrder> queryBySellerId(Integer sellerId, Integer page, Integer limit) {
+        LitemallOrderExample example = new LitemallOrderExample();
+        example.or().andSellerIdEqualTo(sellerId).andDeletedEqualTo(false);
+        example.setOrderByClause("add_time DESC");
+        
+        PageHelper.startPage(page, limit);
+        return litemallOrderMapper.selectByExample(example);
+    }
 }

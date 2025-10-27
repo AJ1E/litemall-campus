@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.linlinjava.litemall.db.dao.SicauCommentMapper">
+  
+  <!-- 结果映射 -->
+  <resultMap id="BaseResultMap" type="org.linlinjava.litemall.db.domain.SicauComment">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="order_id" jdbcType="INTEGER" property="orderId" />
+    <result column="from_user_id" jdbcType="INTEGER" property="fromUserId" />
+    <result column="to_user_id" jdbcType="INTEGER" property="toUserId" />
+    <result column="role" jdbcType="TINYINT" property="role" />
+    <result column="rating" jdbcType="TINYINT" property="rating" />
+    <result column="tags" jdbcType="VARCHAR" property="tags" />
+    <result column="content" jdbcType="VARCHAR" property="content" />
+    <result column="reply" jdbcType="VARCHAR" property="reply" />
+    <result column="is_anonymous" jdbcType="BIT" property="isAnonymous" />
+    <result column="add_time" jdbcType="TIMESTAMP" property="addTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="deleted" jdbcType="BIT" property="deleted" />
+  </resultMap>
+  
+  <!-- 基础列列表 -->
+  <sql id="Base_Column_List">
+    id, order_id, from_user_id, to_user_id, `role`, rating, tags, content, reply,
+    is_anonymous, add_time, update_time, deleted
+  </sql>
+  
+  <!-- 根据主键查询 -->
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  
+  <!-- 根据订单ID查询评价列表 -->
+  <select id="selectByOrderId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment
+    where order_id = #{orderId,jdbcType=INTEGER}
+    and deleted = 0
+    order by add_time desc
+  </select>
+  
+  <!-- 根据订单ID和角色查询评价 -->
+  <select id="selectByOrderIdAndRole" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment
+    where order_id = #{orderId,jdbcType=INTEGER}
+    and `role` = #{role,jdbcType=TINYINT}
+    and deleted = 0
+    limit 1
+  </select>
+  
+  <!-- 查询用户收到的评价列表 -->
+  <select id="selectReceivedComments" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment
+    where to_user_id = #{toUserId,jdbcType=INTEGER}
+    <if test="isAnonymous != null">
+      and is_anonymous = #{isAnonymous,jdbcType=BIT}
+    </if>
+    and deleted = 0
+    order by add_time desc
+    limit #{offset,jdbcType=INTEGER}, #{limit,jdbcType=INTEGER}
+  </select>
+  
+  <!-- 查询用户发出的评价列表 -->
+  <select id="selectSentComments" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_comment
+    where from_user_id = #{fromUserId,jdbcType=INTEGER}
+    and deleted = 0
+    order by add_time desc
+    limit #{offset,jdbcType=INTEGER}, #{limit,jdbcType=INTEGER}
+  </select>
+  
+  <!-- 统计用户收到的评价数量 -->
+  <select id="countReceivedComments" resultType="java.lang.Long">
+    select count(*)
+    from sicau_comment
+    where to_user_id = #{toUserId,jdbcType=INTEGER}
+    <if test="isAnonymous != null">
+      and is_anonymous = #{isAnonymous,jdbcType=BIT}
+    </if>
+    and deleted = 0
+  </select>
+  
+  <!-- 统计用户发出的评价数量 -->
+  <select id="countSentComments" resultType="java.lang.Long">
+    select count(*)
+    from sicau_comment
+    where from_user_id = #{fromUserId,jdbcType=INTEGER}
+    and deleted = 0
+  </select>
+  
+  <!-- 计算用户平均评分 -->
+  <select id="calculateAverageRating" resultType="java.lang.Double">
+    select round(avg(rating), 1)
+    from sicau_comment
+    where to_user_id = #{toUserId,jdbcType=INTEGER}
+    and deleted = 0
+  </select>
+  
+  <!-- 根据主键删除 -->
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
+    delete from sicau_comment
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  
+  <!-- 插入所有字段 -->
+  <insert id="insert" parameterType="org.linlinjava.litemall.db.domain.SicauComment">
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into sicau_comment (id, order_id, from_user_id, 
+      to_user_id, `role`, rating, tags, content, reply,
+      is_anonymous, add_time, update_time, deleted)
+    values (#{id,jdbcType=INTEGER}, #{orderId,jdbcType=INTEGER}, #{fromUserId,jdbcType=INTEGER}, 
+      #{toUserId,jdbcType=INTEGER}, #{role,jdbcType=TINYINT}, #{rating,jdbcType=TINYINT}, 
+      #{tags,jdbcType=VARCHAR}, #{content,jdbcType=VARCHAR}, #{reply,jdbcType=VARCHAR},
+      #{isAnonymous,jdbcType=BIT}, #{addTime,jdbcType=TIMESTAMP}, 
+      #{updateTime,jdbcType=TIMESTAMP}, #{deleted,jdbcType=BIT})
+  </insert>
+  
+  <!-- 插入非空字段 -->
+  <insert id="insertSelective" parameterType="org.linlinjava.litemall.db.domain.SicauComment">
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into sicau_comment
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="orderId != null">
+        order_id,
+      </if>
+      <if test="fromUserId != null">
+        from_user_id,
+      </if>
+      <if test="toUserId != null">
+        to_user_id,
+      </if>
+      <if test="role != null">
+        `role`,
+      </if>
+      <if test="rating != null">
+        rating,
+      </if>
+      <if test="tags != null">
+        tags,
+      </if>
+      <if test="content != null">
+        content,
+      </if>
+      <if test="reply != null">
+        reply,
+      </if>
+      <if test="isAnonymous != null">
+        is_anonymous,
+      </if>
+      <if test="addTime != null">
+        add_time,
+      </if>
+      <if test="updateTime != null">
+        update_time,
+      </if>
+      <if test="deleted != null">
+        deleted,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="orderId != null">
+        #{orderId,jdbcType=INTEGER},
+      </if>
+      <if test="fromUserId != null">
+        #{fromUserId,jdbcType=INTEGER},
+      </if>
+      <if test="toUserId != null">
+        #{toUserId,jdbcType=INTEGER},
+      </if>
+      <if test="role != null">
+        #{role,jdbcType=TINYINT},
+      </if>
+      <if test="rating != null">
+        #{rating,jdbcType=TINYINT},
+      </if>
+      <if test="tags != null">
+        #{tags,jdbcType=VARCHAR},
+      </if>
+      <if test="content != null">
+        #{content,jdbcType=VARCHAR},
+      </if>
+      <if test="reply != null">
+        #{reply,jdbcType=VARCHAR},
+      </if>
+      <if test="isAnonymous != null">
+        #{isAnonymous,jdbcType=BIT},
+      </if>
+      <if test="addTime != null">
+        #{addTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deleted != null">
+        #{deleted,jdbcType=BIT},
+      </if>
+    </trim>
+  </insert>
+  
+  <!-- 根据主键更新非空字段 -->
+  <update id="updateByPrimaryKeySelective" parameterType="org.linlinjava.litemall.db.domain.SicauComment">
+    update sicau_comment
+    <set>
+      <if test="orderId != null">
+        order_id = #{orderId,jdbcType=INTEGER},
+      </if>
+      <if test="fromUserId != null">
+        from_user_id = #{fromUserId,jdbcType=INTEGER},
+      </if>
+      <if test="toUserId != null">
+        to_user_id = #{toUserId,jdbcType=INTEGER},
+      </if>
+      <if test="role != null">
+        `role` = #{role,jdbcType=TINYINT},
+      </if>
+      <if test="rating != null">
+        rating = #{rating,jdbcType=TINYINT},
+      </if>
+      <if test="tags != null">
+        tags = #{tags,jdbcType=VARCHAR},
+      </if>
+      <if test="content != null">
+        content = #{content,jdbcType=VARCHAR},
+      </if>
+      <if test="reply != null">
+        reply = #{reply,jdbcType=VARCHAR},
+      </if>
+      <if test="isAnonymous != null">
+        is_anonymous = #{isAnonymous,jdbcType=BIT},
+      </if>
+      <if test="addTime != null">
+        add_time = #{addTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        update_time = #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deleted != null">
+        deleted = #{deleted,jdbcType=BIT},
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  
+  <!-- 根据主键更新所有字段 -->
+  <update id="updateByPrimaryKey" parameterType="org.linlinjava.litemall.db.domain.SicauComment">
+    update sicau_comment
+    set order_id = #{orderId,jdbcType=INTEGER},
+      from_user_id = #{fromUserId,jdbcType=INTEGER},
+      to_user_id = #{toUserId,jdbcType=INTEGER},
+      `role` = #{role,jdbcType=TINYINT},
+      rating = #{rating,jdbcType=TINYINT},
+      tags = #{tags,jdbcType=VARCHAR},
+      content = #{content,jdbcType=VARCHAR},
+      reply = #{reply,jdbcType=VARCHAR},
+      is_anonymous = #{isAnonymous,jdbcType=BIT},
+      add_time = #{addTime,jdbcType=TIMESTAMP},
+      update_time = #{updateTime,jdbcType=TIMESTAMP},
+      deleted = #{deleted,jdbcType=BIT}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  
+</mapper>
