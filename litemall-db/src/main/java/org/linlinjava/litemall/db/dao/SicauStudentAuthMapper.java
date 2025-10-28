@@ -60,6 +60,20 @@ public interface SicauStudentAuthMapper {
     List<SicauStudentAuth> selectByStatus(@Param("status") Byte status);
 
     /**
+     * 分页查询认证列表（支持状态筛选）
+     * @param status 认证状态（可选）
+     * @return 认证列表
+     */
+    List<SicauStudentAuth> selectByStatusWithPage(@Param("status") Byte status);
+
+    /**
+     * 统计认证数量（支持状态筛选）
+     * @param status 认证状态（可选）
+     * @return 数量
+     */
+    int countByStatus(@Param("status") Byte status);
+
+    /**
      * 根据主键更新记录（仅更新非空字段）
      * @param record 实体对象
      * @return 影响行数

@@ -1,5 +1,6 @@
 package org.linlinjava.litemall.db.service;
 
+import com.github.pagehelper.PageHelper;
 import org.linlinjava.litemall.db.dao.SicauStudentAuthMapper;
 import org.linlinjava.litemall.db.domain.SicauStudentAuth;
 import org.springframework.stereotype.Service;
@@ -51,6 +52,27 @@ public class SicauStudentAuthService {
      */
     public List<SicauStudentAuth> listByStatus(Byte status) {
         return authMapper.selectByStatus(status);
+    }
+
+    /**
+     * 分页查询认证列表
+     * @param status 认证状态（可选）
+     * @param page 页码
+     * @param size 每页数量
+     * @return 认证列表
+     */
+    public List<SicauStudentAuth> queryByStatus(Byte status, Integer page, Integer size) {
+        PageHelper.startPage(page, size);
+        return authMapper.selectByStatusWithPage(status);
+    }
+
+    /**
+     * 统计认证数量
+     * @param status 认证状态（可选）
+     * @return 数量
+     */
+    public int countByStatus(Byte status) {
+        return authMapper.countByStatus(status);
     }
 
     /**

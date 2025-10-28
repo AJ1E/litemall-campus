@@ -157,23 +157,25 @@ public class SicauDonationService {
         donation.setUpdateTime(LocalDateTime.now());
         donationMapper.updateByPrimaryKeySelective(donation);
         
-        // 2. 奖励积分（+20 分）
-        // TODO: 等待 CreditScoreService 完善后对接
-        logger.info("捐赠 {} 已完成，用户 {} 应获得 +20 积分", donationId, donation.getUserId());
-        
-        // 3. 增加捐赠次数并检查徽章
+        // 2. 奖励积分（+20 分）- 通过userService增加积分
         LitemallUser user = userService.findById(donation.getUserId());
         if (user != null) {
-            // 增加捐赠次数（暂时注释，等 litemall_user 表有 donation_count 字段后启用）
-            // int newCount = (user.getDonationCount() != null ? user.getDonationCount() : 0) + 1;
-            // user.setDonationCount(newCount);
+            // 增加积分
+            Integer currentScore = user.getCreditScore() != null ? user.getCreditScore() : 100;
+            user.setCreditScore(currentScore + 20);
+            logger.info("捐赠 " + donationId + " 已完成，用户 " + user.getId() + " 获得 +20 积分，当前积分: " + user.getCreditScore());
+            
+            // 3. 增加捐赠次数
+            int newCount = (user.getDonationCount() != null ? user.getDonationCount() : 0) + 1;
+            user.setDonationCount(newCount);
             
             // 4. 检查并颁发徽章
-            // awardBadge(user, newCount);
+            awardBadge(user, newCount);
             
-            // userService.updateById(user);
+            // 5. 更新用户信息
+            userService.updateById(user);
             
-            logger.info("捐赠 {} 完成，用户 {} 累计捐赠次数待更新", donationId, donation.getUserId());
+            logger.info("捐赠 " + donationId + " 完成，用户 " + user.getId() + " 累计捐赠 " + newCount + " 次");
         }
     }
     
@@ -183,12 +185,18 @@ public class SicauDonationService {
      * @param count 捐赠次数
      */
     private void awardBadge(LitemallUser user, int count) {
-        // 暂时注释，等 litemall_user 表有 badges 字段后启用
-        /*
         List<String> badges = new ArrayList<>();
         String badgesJson = user.getBadges();
-        if (badgesJson != null && !badgesJson.isEmpty()) {
-            badges = JSON.parseArray(badgesJson, String.class);
+        
+        // 解析现有徽章
+        if (badgesJson != null && !badgesJson.isEmpty() && !"null".equals(badgesJson)) {
+            try {
+                TypeReference<List<String>> typeRef = new TypeReference<List<String>>() {};
+                badges = objectMapper.readValue(badgesJson, typeRef);
+            } catch (Exception e) {
+                logger.warn("解析徽章JSON失败: " + badgesJson, e);
+                badges = new ArrayList<>();
+            }
         }
         
         boolean updated = false;
@@ -196,28 +204,31 @@ public class SicauDonationService {
         // 捐赠 5 次 → 爱心大使
         if (count == 5 && !badges.contains("爱心大使")) {
             badges.add("爱心大使");
-            logger.info("用户 {} 获得【爱心大使】徽章！", user.getId());
+            logger.info("用户 " + user.getId() + " 获得【爱心大使】徽章！");
             updated = true;
         }
         
         // 捐赠 10 次 → 公益达人
         if (count == 10 && !badges.contains("公益达人")) {
             badges.add("公益达人");
-            logger.info("用户 {} 获得【公益达人】徽章！", user.getId());
+            logger.info("用户 " + user.getId() + " 获得【公益达人】徽章！");
             updated = true;
         }
         
         // 捐赠 20 次 → 环保先锋
         if (count == 20 && !badges.contains("环保先锋")) {
             badges.add("环保先锋");
-            logger.info("用户 {} 获得【环保先锋】徽章！", user.getId());
+            logger.info("用户 " + user.getId() + " 获得【环保先锋】徽章！");
             updated = true;
         }
         
         if (updated) {
-            user.setBadges(JSON.toJSONString(badges));
+            try {
+                user.setBadges(objectMapper.writeValueAsString(badges));
+            } catch (JsonProcessingException e) {
+                logger.error("徽章JSON序列化失败", e);
+            }
         }
-        */
     }
     
     /**
@@ -256,15 +267,19 @@ public class SicauDonationService {
     
     /**
      * 根据状态查询捐赠列表
-     * @param status 状态（0-待审核, 1-审核通过, 2-审核拒绝, 3-已完成）
+     * @param status 状态（0-待审核, 1-审核通过, 2-审核拒绝, 3-已完成），null表示查询所有
      */
     public List<SicauDonation> queryByStatus(Byte status, Integer page, Integer size) {
         PageHelper.startPage(page, size);
         
         SicauDonationExample example = new SicauDonationExample();
-        example.createCriteria()
-            .andStatusEqualTo(status)
-            .andDeletedEqualTo(false);
+        SicauDonationExample.Criteria criteria = example.createCriteria();
+        criteria.andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        
         example.setOrderByClause("add_time DESC");
         
         return donationMapper.selectByExample(example);
@@ -279,12 +294,17 @@ public class SicauDonationService {
     
     /**
      * 统计捐赠数量（按状态）
+     * @param status 状态，null表示统计所有
      */
     public int countByStatus(Byte status) {
         SicauDonationExample example = new SicauDonationExample();
-        example.createCriteria()
-            .andStatusEqualTo(status)
-            .andDeletedEqualTo(false);
+        SicauDonationExample.Criteria criteria = example.createCriteria();
+        criteria.andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        
         return (int) donationMapper.countByExample(example);
     }
 }

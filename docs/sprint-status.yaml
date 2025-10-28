@@ -6,7 +6,7 @@
 sprints:
   - id: 1
     name: "MVP Sprint 1 (Core Functionality)"
-    status: "in-progress"
+    status: "completed"
     epics:
       - id: 1
         title: "用户认证与信用体系"
@@ -126,35 +126,35 @@ sprints:
 
       - id: 6
         title: "公益捐赠通道"
-        status: "in-progress"
+        status: "completed"
         stories:
           - id: "6.1"
             title: "提交捐赠申请"
             status: "done"
           - id: "6.2"
             title: "管理员审核捐赠"
-            status: "ready-for-dev"
+            status: "done"
           - id: "6.3"
             title: "捐赠完成奖励"
-            status: "ready-for-dev"
+            status: "done"
         retrospective:
           status: "optional"
 
       - id: 7
         title: "管理后台增强"
-        status: "contexted"
+        status: "completed"
         stories:
           - id: "7.1"
             title: "学号认证审核"
-            status: "ready-for-dev"
+            status: "done"
           - id: "7.2"
             title: "违规账号封禁"
-            status: "ready-for-dev"
+            status: "done"
           - id: "7.3"
             title: "交易纠纷处理"
-            status: "ready-for-dev"
+            status: "done"
           - id: "7.4"
             title: "数据统计大屏"
-            status: "ready-for-dev"
+            status: "done"
         retrospective:
           status: "optional"

@@ -68,6 +68,28 @@
     order by submit_time asc
   </select>
   
+  <!-- 分页查询认证列表（支持状态筛选） -->
+  <select id="selectByStatusWithPage" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_student_auth
+    where deleted = 0
+    <if test="status != null">
+      and `status` = #{status,jdbcType=TINYINT}
+    </if>
+    order by submit_time DESC
+  </select>
+  
+  <!-- 统计认证数量（支持状态筛选） -->
+  <select id="countByStatus" resultType="java.lang.Integer">
+    select count(*)
+    from sicau_student_auth
+    where deleted = 0
+    <if test="status != null">
+      and `status` = #{status,jdbcType=TINYINT}
+    </if>
+  </select>
+  
   <!-- 根据主键删除 -->
   <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
     delete from sicau_student_auth

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.linlinjava.litemall.db.dao.SicauAdminLogMapper">
+  
+  <resultMap id="BaseResultMap" type="org.linlinjava.litemall.db.domain.SicauAdminLog">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="admin_id" jdbcType="INTEGER" property="adminId" />
+    <result column="admin_name" jdbcType="VARCHAR" property="adminName" />
+    <result column="action_type" jdbcType="VARCHAR" property="actionType" />
+    <result column="target_type" jdbcType="VARCHAR" property="targetType" />
+    <result column="target_id" jdbcType="INTEGER" property="targetId" />
+    <result column="action_detail" jdbcType="LONGVARCHAR" property="actionDetail" />
+    <result column="ip_address" jdbcType="VARCHAR" property="ipAddress" />
+    <result column="add_time" jdbcType="TIMESTAMP" property="addTime" />
+  </resultMap>
+  
+  <sql id="Base_Column_List">
+    id, admin_id, admin_name, action_type, target_type, target_id, action_detail, ip_address, add_time
+  </sql>
+
+  <insert id="insertSelective" parameterType="org.linlinjava.litemall.db.domain.SicauAdminLog" useGeneratedKeys="true" keyProperty="id">
+    insert into sicau_admin_log
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="adminId != null">
+        admin_id,
+      </if>
+      <if test="adminName != null">
+        admin_name,
+      </if>
+      <if test="actionType != null">
+        action_type,
+      </if>
+      <if test="targetType != null">
+        target_type,
+      </if>
+      <if test="targetId != null">
+        target_id,
+      </if>
+      <if test="actionDetail != null">
+        action_detail,
+      </if>
+      <if test="ipAddress != null">
+        ip_address,
+      </if>
+      <if test="addTime != null">
+        add_time,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="adminId != null">
+        #{adminId,jdbcType=INTEGER},
+      </if>
+      <if test="adminName != null">
+        #{adminName,jdbcType=VARCHAR},
+      </if>
+      <if test="actionType != null">
+        #{actionType,jdbcType=VARCHAR},
+      </if>
+      <if test="targetType != null">
+        #{targetType,jdbcType=VARCHAR},
+      </if>
+      <if test="targetId != null">
+        #{targetId,jdbcType=INTEGER},
+      </if>
+      <if test="actionDetail != null">
+        #{actionDetail,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="ipAddress != null">
+        #{ipAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="addTime != null">
+        #{addTime,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+
+  <select id="selectByAdminId" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_admin_log
+    where admin_id = #{adminId,jdbcType=INTEGER}
+    order by add_time DESC
+  </select>
+
+  <select id="selectByActionType" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_admin_log
+    where action_type = #{actionType,jdbcType=VARCHAR}
+    order by add_time DESC
+  </select>
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_admin_log
+    order by add_time DESC
+  </select>
+
+</mapper>

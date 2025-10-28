@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.linlinjava.litemall.db.dao.SicauDailyStatisticsMapper">
+  
+  <resultMap id="BaseResultMap" type="org.linlinjava.litemall.db.domain.SicauDailyStatistics">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="stat_date" jdbcType="DATE" property="statDate" />
+    <result column="dau" jdbcType="INTEGER" property="dau" />
+    <result column="new_users" jdbcType="INTEGER" property="newUsers" />
+    <result column="total_orders" jdbcType="INTEGER" property="totalOrders" />
+    <result column="paid_orders" jdbcType="INTEGER" property="paidOrders" />
+    <result column="gmv" jdbcType="DECIMAL" property="gmv" />
+    <result column="avg_price" jdbcType="DECIMAL" property="avgPrice" />
+    <result column="new_goods" jdbcType="INTEGER" property="newGoods" />
+    <result column="add_time" jdbcType="TIMESTAMP" property="addTime" />
+  </resultMap>
+  
+  <sql id="Base_Column_List">
+    id, stat_date, dau, new_users, total_orders, paid_orders, gmv, avg_price, new_goods, add_time
+  </sql>
+
+  <insert id="insertSelective" parameterType="org.linlinjava.litemall.db.domain.SicauDailyStatistics" useGeneratedKeys="true" keyProperty="id">
+    insert into sicau_daily_statistics
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="statDate != null">
+        stat_date,
+      </if>
+      <if test="dau != null">
+        dau,
+      </if>
+      <if test="newUsers != null">
+        new_users,
+      </if>
+      <if test="totalOrders != null">
+        total_orders,
+      </if>
+      <if test="paidOrders != null">
+        paid_orders,
+      </if>
+      <if test="gmv != null">
+        gmv,
+      </if>
+      <if test="avgPrice != null">
+        avg_price,
+      </if>
+      <if test="newGoods != null">
+        new_goods,
+      </if>
+      <if test="addTime != null">
+        add_time,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="statDate != null">
+        #{statDate,jdbcType=DATE},
+      </if>
+      <if test="dau != null">
+        #{dau,jdbcType=INTEGER},
+      </if>
+      <if test="newUsers != null">
+        #{newUsers,jdbcType=INTEGER},
+      </if>
+      <if test="totalOrders != null">
+        #{totalOrders,jdbcType=INTEGER},
+      </if>
+      <if test="paidOrders != null">
+        #{paidOrders,jdbcType=INTEGER},
+      </if>
+      <if test="gmv != null">
+        #{gmv,jdbcType=DECIMAL},
+      </if>
+      <if test="avgPrice != null">
+        #{avgPrice,jdbcType=DECIMAL},
+      </if>
+      <if test="newGoods != null">
+        #{newGoods,jdbcType=INTEGER},
+      </if>
+      <if test="addTime != null">
+        #{addTime,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+
+  <select id="selectByDate" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_daily_statistics
+    where stat_date = #{statDate,jdbcType=DATE}
+  </select>
+
+  <select id="selectRecentDays" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_daily_statistics
+    where stat_date >= DATE_SUB(CURDATE(), INTERVAL #{days,jdbcType=INTEGER} DAY)
+    order by stat_date DESC
+  </select>
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sicau_daily_statistics
+    order by stat_date DESC
+  </select>
+
+</mapper>
