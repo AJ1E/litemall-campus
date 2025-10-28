@@ -4,11 +4,13 @@ import com.github.pagehelper.PageHelper;
 import org.linlinjava.litemall.db.dao.SicauCommentMapper;
 import org.linlinjava.litemall.db.dao.SicauCommentTagMapper;
 import org.linlinjava.litemall.db.domain.SicauComment;
+import org.linlinjava.litemall.db.domain.SicauCommentExample;
 import org.linlinjava.litemall.db.domain.SicauCommentTag;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -38,14 +40,16 @@ public class SicauCommentService {
      * 根据订单ID查询评价列表
      */
     public List<SicauComment> findByOrderId(Integer orderId) {
-        return commentMapper.selectByOrderId(orderId);
+        SicauCommentExample example = new SicauCommentExample();
+        example.or().andOrderIdEqualTo(orderId).andDeletedEqualTo(false);
+        return commentMapper.selectByExample(example);
     }
     
     /**
      * 判断订单是否已评价（根据订单ID和角色）
      */
     public boolean isCommented(Integer orderId, Byte role) {
-        SicauComment comment = commentMapper.selectByOrderIdAndRole(orderId, role);
+        SicauComment comment = findByOrderIdAndRole(orderId, role);
         return comment != null;
     }
     
@@ -53,7 +57,10 @@ public class SicauCommentService {
      * 根据订单ID和角色查询评价
      */
     public SicauComment findByOrderIdAndRole(Integer orderId, Byte role) {
-        return commentMapper.selectByOrderIdAndRole(orderId, role);
+        SicauCommentExample example = new SicauCommentExample();
+        example.or().andOrderIdEqualTo(orderId).andRoleEqualTo(role).andDeletedEqualTo(false);
+        List<SicauComment> list = commentMapper.selectByExample(example);
+        return list.isEmpty() ? null : list.get(0);
     }
     
     /**
@@ -61,39 +68,67 @@ public class SicauCommentService {
      */
     public List<SicauComment> queryReceivedComments(Integer toUserId, Boolean isAnonymous, 
                                                      Integer page, Integer limit) {
+        SicauCommentExample example = new SicauCommentExample();
+        SicauCommentExample.Criteria criteria = example.or().andToUserIdEqualTo(toUserId).andDeletedEqualTo(false);
+        if (isAnonymous != null) {
+            criteria.andIsAnonymousEqualTo(isAnonymous);
+        }
+        example.setOrderByClause("add_time DESC");
         PageHelper.startPage(page, limit);
-        return commentMapper.selectReceivedComments(toUserId, isAnonymous, 
-                                                     (page - 1) * limit, limit);
+        return commentMapper.selectByExample(example);
     }
     
     /**
      * 查询用户发出的评价列表（分页）
      */
     public List<SicauComment> querySentComments(Integer fromUserId, Integer page, Integer limit) {
+        SicauCommentExample example = new SicauCommentExample();
+        example.or().andFromUserIdEqualTo(fromUserId).andDeletedEqualTo(false);
+        example.setOrderByClause("add_time DESC");
         PageHelper.startPage(page, limit);
-        return commentMapper.selectSentComments(fromUserId, (page - 1) * limit, limit);
+        return commentMapper.selectByExample(example);
     }
     
     /**
      * 统计用户收到的评价数量
      */
     public long countReceivedComments(Integer toUserId, Boolean isAnonymous) {
-        return commentMapper.countReceivedComments(toUserId, isAnonymous);
+        SicauCommentExample example = new SicauCommentExample();
+        SicauCommentExample.Criteria criteria = example.or().andToUserIdEqualTo(toUserId).andDeletedEqualTo(false);
+        if (isAnonymous != null) {
+            criteria.andIsAnonymousEqualTo(isAnonymous);
+        }
+        return commentMapper.countByExample(example);
     }
     
     /**
      * 统计用户发出的评价数量
      */
     public long countSentComments(Integer fromUserId) {
-        return commentMapper.countSentComments(fromUserId);
+        SicauCommentExample example = new SicauCommentExample();
+        example.or().andFromUserIdEqualTo(fromUserId).andDeletedEqualTo(false);
+        return commentMapper.countByExample(example);
     }
     
     /**
      * 计算用户平均评分
      */
     public Double calculateAverageRating(Integer toUserId) {
-        Double avgRating = commentMapper.calculateAverageRating(toUserId);
-        return avgRating != null ? avgRating : 0.0;
+        SicauCommentExample example = new SicauCommentExample();
+        example.or().andToUserIdEqualTo(toUserId).andDeletedEqualTo(false);
+        List<SicauComment> comments = commentMapper.selectByExample(example);
+        
+        if (comments.isEmpty()) {
+            return 0.0;
+        }
+        
+        double sum = 0.0;
+        for (SicauComment comment : comments) {
+            if (comment.getRating() != null) {
+                sum += comment.getRating().doubleValue();
+            }
+        }
+        return sum / comments.size();
     }
     
     /**

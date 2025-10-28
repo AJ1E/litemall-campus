@@ -3,6 +3,7 @@ package org.linlinjava.litemall.db.service;
 import com.github.pagehelper.PageHelper;
 import org.linlinjava.litemall.db.dao.SicauCourseMaterialMapper;
 import org.linlinjava.litemall.db.domain.SicauCourseMaterial;
+import org.linlinjava.litemall.db.domain.SicauCourseMaterialExample;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -28,7 +29,11 @@ public class SicauCourseMaterialService {
         if (limit == null || limit <= 0) {
             limit = 10;
         }
-        return courseMaterialMapper.searchByCourseName(keyword, limit);
+        SicauCourseMaterialExample example = new SicauCourseMaterialExample();
+        example.or().andCourseNameLike("%" + keyword + "%").andDeletedEqualTo(false);
+        example.setOrderByClause("add_time DESC");
+        PageHelper.startPage(1, limit);
+        return courseMaterialMapper.selectByExample(example);
     }
     
     /**
@@ -38,7 +43,11 @@ public class SicauCourseMaterialService {
         if (limit == null || limit <= 0) {
             limit = 10;
         }
-        return courseMaterialMapper.searchByBookName(keyword, limit);
+        SicauCourseMaterialExample example = new SicauCourseMaterialExample();
+        example.or().andBookNameLike("%" + keyword + "%").andDeletedEqualTo(false);
+        example.setOrderByClause("add_time DESC");
+        PageHelper.startPage(1, limit);
+        return courseMaterialMapper.selectByExample(example);
     }
     
     /**
@@ -48,7 +57,14 @@ public class SicauCourseMaterialService {
         if (limit == null || limit <= 0) {
             limit = 10;
         }
-        return courseMaterialMapper.search(keyword, limit);
+        SicauCourseMaterialExample example = new SicauCourseMaterialExample();
+        SicauCourseMaterialExample.Criteria criteria1 = example.or();
+        criteria1.andCourseNameLike("%" + keyword + "%").andDeletedEqualTo(false);
+        SicauCourseMaterialExample.Criteria criteria2 = example.or();
+        criteria2.andBookNameLike("%" + keyword + "%").andDeletedEqualTo(false);
+        example.setOrderByClause("add_time DESC");
+        PageHelper.startPage(1, limit);
+        return courseMaterialMapper.selectByExample(example);
     }
     
     /**
@@ -56,15 +72,44 @@ public class SicauCourseMaterialService {
      */
     public List<SicauCourseMaterial> querySelective(String courseName, String bookName, 
                                                      String college, Integer page, Integer limit) {
+        SicauCourseMaterialExample example = new SicauCourseMaterialExample();
+        SicauCourseMaterialExample.Criteria criteria = example.or();
+        criteria.andDeletedEqualTo(false);
+        
+        if (courseName != null && !courseName.isEmpty()) {
+            criteria.andCourseNameLike("%" + courseName + "%");
+        }
+        if (bookName != null && !bookName.isEmpty()) {
+            criteria.andBookNameLike("%" + bookName + "%");
+        }
+        if (college != null && !college.isEmpty()) {
+            criteria.andCollegeEqualTo(college);
+        }
+        
+        example.setOrderByClause("add_time DESC");
         PageHelper.startPage(page, limit);
-        return courseMaterialMapper.selectByCondition(courseName, bookName, college, null, null);
+        return courseMaterialMapper.selectByExample(example);
     }
     
     /**
      * 统计教材数量
      */
     public int countSelective(String courseName, String bookName, String college) {
-        return courseMaterialMapper.countByCondition(courseName, bookName, college);
+        SicauCourseMaterialExample example = new SicauCourseMaterialExample();
+        SicauCourseMaterialExample.Criteria criteria = example.or();
+        criteria.andDeletedEqualTo(false);
+        
+        if (courseName != null && !courseName.isEmpty()) {
+            criteria.andCourseNameLike("%" + courseName + "%");
+        }
+        if (bookName != null && !bookName.isEmpty()) {
+            criteria.andBookNameLike("%" + bookName + "%");
+        }
+        if (college != null && !college.isEmpty()) {
+            criteria.andCollegeEqualTo(college);
+        }
+        
+        return (int) courseMaterialMapper.countByExample(example);
     }
     
     /**

@@ -3,6 +3,7 @@ package org.linlinjava.litemall.db.service;
 import com.github.pagehelper.PageHelper;
 import org.linlinjava.litemall.db.dao.SicauOrderRefundMapper;
 import org.linlinjava.litemall.db.domain.SicauOrderRefund;
+import org.linlinjava.litemall.db.domain.SicauOrderRefundExample;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,29 +49,41 @@ public class SicauOrderRefundService {
      * 根据订单ID查询退款记录
      */
     public SicauOrderRefund findByOrderId(Integer orderId) {
-        return refundMapper.selectByOrderId(orderId);
+        SicauOrderRefundExample example = new SicauOrderRefundExample();
+        example.or().andOrderIdEqualTo(orderId);
+        example.setOrderByClause("add_time DESC");
+        List<SicauOrderRefund> list = refundMapper.selectByExample(example);
+        return list.isEmpty() ? null : list.get(0);
     }
     
     /**
      * 根据退款流水号查询退款记录
      */
     public SicauOrderRefund findByRefundSn(String refundSn) {
-        return refundMapper.selectByRefundSn(refundSn);
+        SicauOrderRefundExample example = new SicauOrderRefundExample();
+        example.or().andRefundSnEqualTo(refundSn);
+        List<SicauOrderRefund> list = refundMapper.selectByExample(example);
+        return list.isEmpty() ? null : list.get(0);
     }
     
     /**
      * 查询退款列表（按状态，分页）
      */
     public List<SicauOrderRefund> queryByStatus(Byte refundStatus, Integer page, Integer limit) {
+        SicauOrderRefundExample example = new SicauOrderRefundExample();
+        example.or().andRefundStatusEqualTo(refundStatus);
+        example.setOrderByClause("add_time DESC");
         PageHelper.startPage(page, limit);
-        return refundMapper.selectByStatus(refundStatus, (page - 1) * limit, limit);
+        return refundMapper.selectByExample(example);
     }
     
     /**
      * 统计退款记录数量（按状态）
      */
     public long countByStatus(Byte refundStatus) {
-        return refundMapper.countByStatus(refundStatus);
+        SicauOrderRefundExample example = new SicauOrderRefundExample();
+        example.or().andRefundStatusEqualTo(refundStatus);
+        return refundMapper.countByExample(example);
     }
     
     /**
@@ -162,7 +175,7 @@ public class SicauOrderRefundService {
      */
     @Transactional
     public int updateRefundStatusByOrderId(Integer orderId, Byte refundStatus) {
-        SicauOrderRefund existingRefund = refundMapper.selectByOrderId(orderId);
+        SicauOrderRefund existingRefund = findByOrderId(orderId);
         if (existingRefund == null) {
             return 0;
         }

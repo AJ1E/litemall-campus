@@ -335,6 +335,19 @@ public class WxGoodsController {
 	 * @param goods 商品信息
 	 * @return 发布结果
 	 */
+	/**
+	 * 商品发布 (Story 2.1)
+	 * 
+	 * 验收标准:
+	 * - 必填字段: 标题(≤30字)、价格(≥1元)、分类、新旧程度
+	 * - 可选字段: 原价、购买时间、详细描述(≤500字)
+	 * - 支持上传 1-9 张图片，单张 ≤ 5MB
+	 * - 实时检测敏感词
+	 * 
+	 * @param userId 用户ID
+	 * @param goods 商品信息
+	 * @return 发布结果
+	 */
 	@PostMapping("publish")
 	public Object publish(@LoginUser Integer userId, @RequestBody LitemallGoods goods) {
 		// 1. 校验用户登录
@@ -346,20 +359,39 @@ public class WxGoodsController {
 		if (StringUtils.isEmpty(goods.getName())) {
 			return ResponseUtil.badArgumentValue("商品名称不能为空");
 		}
+		if (goods.getName().length() > 30) {
+			return ResponseUtil.badArgumentValue("商品名称不能超过30个字符");
+		}
 		if (goods.getCategoryId() == null) {
 			return ResponseUtil.badArgumentValue("请选择商品分类");
 		}
 		if (goods.getRetailPrice() == null) {
 			return ResponseUtil.badArgumentValue("请填写出售价格");
 		}
+		if (goods.getRetailPrice().doubleValue() < 1.0) {
+			return ResponseUtil.badArgumentValue("出售价格不能低于1元");
+		}
 		if (goods.getNewness() == null) {
 			return ResponseUtil.badArgumentValue("请选择新旧程度");
+		}
+		if (goods.getNewness() < 1 || goods.getNewness() > 4) {
+			return ResponseUtil.badArgumentValue("新旧程度参数错误(1-4)");
 		}
 		if (StringUtils.isEmpty(goods.getPicUrl())) {
 			return ResponseUtil.badArgumentValue("请上传商品图片");
 		}
 		
-		// 3. 敏感词检测
+		// 3. 校验可选字段
+		if (goods.getDetail() != null && goods.getDetail().length() > 500) {
+			return ResponseUtil.badArgumentValue("商品描述不能超过500个字符");
+		}
+		
+		// 4. 校验图片数量(1-9张)
+		if (goods.getGallery() != null && goods.getGallery().length > 9) {
+			return ResponseUtil.badArgumentValue("商品图片不能超过9张");
+		}
+		
+		// 5. 敏感词检测
 		String textToCheck = goods.getName() + " " + 
 		                    (goods.getBrief() != null ? goods.getBrief() : "") + " " +
 		                    (goods.getDetail() != null ? goods.getDetail() : "");
@@ -371,25 +403,26 @@ public class WxGoodsController {
 			return ResponseUtil.fail(600, "商品信息包含敏感词: " + String.join(", ", sensitiveWords));
 		}
 		
-		// 4. 设置商品基本信息
+		// 6. 设置商品基本信息
 		goods.setUserId(userId);
-		goods.setStatus((byte) 1); // 1-待审核
+		goods.setStatus((byte) 0); // 0-待审核
 		goods.setIsOnSale(false); // 默认不上架，需审核通过
 		goods.setAddTime(LocalDateTime.now());
 		goods.setUpdateTime(LocalDateTime.now());
 		goods.setDeleted(false);
 		
-		// 5. 生成商品编号
+		// 7. 生成商品编号
 		String goodsSn = generateGoodsSn();
 		goods.setGoodsSn(goodsSn);
 		
-		// 6. 保存商品
+		// 8. 保存商品
 		goodsService.add(goods);
 		
-		// 7. 返回成功结果
+		// 9. 返回成功结果
 		Map<String, Object> data = new HashMap<>();
 		data.put("id", goods.getId());
 		data.put("goodsSn", goods.getGoodsSn());
+		data.put("status", goods.getStatus());
 		
 		return ResponseUtil.ok(data);
 	}

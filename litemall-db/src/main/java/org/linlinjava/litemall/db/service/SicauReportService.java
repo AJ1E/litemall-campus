@@ -3,6 +3,8 @@ package org.linlinjava.litemall.db.service;
 import com.github.pagehelper.PageHelper;
 import org.linlinjava.litemall.db.dao.SicauReportMapper;
 import org.linlinjava.litemall.db.domain.SicauReport;
+import org.linlinjava.litemall.db.domain.SicauReportExample;
+import org.linlinjava.litemall.db.domain.SicauReportWithBLOBs;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +35,10 @@ public class SicauReportService {
      * 根据订单ID查询举报列表
      */
     public List<SicauReport> findByOrderId(Integer orderId) {
-        return reportMapper.selectByOrderId(orderId);
+        SicauReportExample example = new SicauReportExample();
+        example.or().andOrderIdEqualTo(orderId).andDeletedEqualTo(false);
+        example.setOrderByClause("add_time DESC");
+        return reportMapper.selectByExample(example);
     }
     
     /**
@@ -41,9 +46,17 @@ public class SicauReportService {
      */
     public List<SicauReport> queryByReporter(Integer reporterId, Byte status, 
                                               Integer page, Integer limit) {
+        SicauReportExample example = new SicauReportExample();
+        SicauReportExample.Criteria criteria = example.or();
+        criteria.andReporterIdEqualTo(reporterId).andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        
+        example.setOrderByClause("add_time DESC");
         PageHelper.startPage(page, limit);
-        return reportMapper.selectByReporter(reporterId, status, 
-                                              (page - 1) * limit, limit);
+        return reportMapper.selectByExample(example);
     }
     
     /**
@@ -51,9 +64,17 @@ public class SicauReportService {
      */
     public List<SicauReport> queryByReported(Integer reportedId, Byte status, 
                                               Integer page, Integer limit) {
+        SicauReportExample example = new SicauReportExample();
+        SicauReportExample.Criteria criteria = example.or();
+        criteria.andReportedIdEqualTo(reportedId).andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        
+        example.setOrderByClause("add_time DESC");
         PageHelper.startPage(page, limit);
-        return reportMapper.selectByReported(reportedId, status, 
-                                              (page - 1) * limit, limit);
+        return reportMapper.selectByExample(example);
     }
     
     /**
@@ -61,37 +82,75 @@ public class SicauReportService {
      */
     public List<SicauReport> queryAllReports(Byte status, Byte type, 
                                               Integer page, Integer limit) {
+        SicauReportExample example = new SicauReportExample();
+        SicauReportExample.Criteria criteria = example.or();
+        criteria.andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        if (type != null) {
+            criteria.andTypeEqualTo(type);
+        }
+        
+        example.setOrderByClause("add_time DESC");
         PageHelper.startPage(page, limit);
-        return reportMapper.selectAllReports(status, type, 
-                                              (page - 1) * limit, limit);
+        return reportMapper.selectByExample(example);
     }
     
     /**
      * 统计用户发起的举报数量
      */
     public long countByReporter(Integer reporterId, Byte status) {
-        return reportMapper.countByReporter(reporterId, status);
+        SicauReportExample example = new SicauReportExample();
+        SicauReportExample.Criteria criteria = example.or();
+        criteria.andReporterIdEqualTo(reporterId).andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        
+        return reportMapper.countByExample(example);
     }
     
     /**
      * 统计针对某用户的举报数量
      */
     public long countByReported(Integer reportedId, Byte status) {
-        return reportMapper.countByReported(reportedId, status);
+        SicauReportExample example = new SicauReportExample();
+        SicauReportExample.Criteria criteria = example.or();
+        criteria.andReportedIdEqualTo(reportedId).andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        
+        return reportMapper.countByExample(example);
     }
     
     /**
      * 统计所有举报数量（管理员用）
      */
     public long countAllReports(Byte status, Byte type) {
-        return reportMapper.countAllReports(status, type);
+        SicauReportExample example = new SicauReportExample();
+        SicauReportExample.Criteria criteria = example.or();
+        criteria.andDeletedEqualTo(false);
+        
+        if (status != null) {
+            criteria.andStatusEqualTo(status);
+        }
+        if (type != null) {
+            criteria.andTypeEqualTo(type);
+        }
+        
+        return reportMapper.countByExample(example);
     }
     
     /**
      * 提交举报
      */
     @Transactional
-    public int addReport(SicauReport report) {
+    public int addReport(SicauReportWithBLOBs report) {
         report.setStatus((byte) 0); // 0-待处理
         report.setAddTime(LocalDateTime.now());
         report.setUpdateTime(LocalDateTime.now());
@@ -108,7 +167,7 @@ public class SicauReportService {
         report.setId(id);
         report.setStatus(status);
         report.setUpdateTime(LocalDateTime.now());
-        return reportMapper.updateByPrimaryKeySelective(report);
+        return reportMapper.updateByPrimaryKey(report);
     }
     
     /**
@@ -116,7 +175,7 @@ public class SicauReportService {
      */
     @Transactional
     public int handleReport(Integer id, Integer handlerAdminId, String handleResult, Byte status) {
-        SicauReport report = new SicauReport();
+        SicauReportWithBLOBs report = new SicauReportWithBLOBs();
         report.setId(id);
         report.setHandlerAdminId(handlerAdminId);
         report.setHandleResult(handleResult);
@@ -135,6 +194,6 @@ public class SicauReportService {
         report.setId(id);
         report.setDeleted(true);
         report.setUpdateTime(LocalDateTime.now());
-        return reportMapper.updateByPrimaryKeySelective(report);
+        return reportMapper.updateByPrimaryKey(report);
     }
 }

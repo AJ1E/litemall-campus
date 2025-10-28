@@ -32,11 +32,11 @@ sprints:
 
       - id: 2
         title: "商品发布与管理"
-        status: "contexted"
+        status: "in-progress"
         stories:
           - id: "2.1"
             title: "商品发布"
-            status: "ready-for-dev"
+            status: "completed"
           - id: "2.2"
             title: "分类标签管理"
             status: "ready-for-dev"
@@ -85,11 +85,11 @@ sprints:
 
       - id: 4
         title: "学生快递员配送系统"
-        status: "contexted"
+        status: "in-progress"
         stories:
           - id: "4.1"
             title: "申请成为快递员"
-            status: "ready-for-dev"
+            status: "review"
           - id: "4.2"
             title: "查看待配送订单"
             status: "ready-for-dev"

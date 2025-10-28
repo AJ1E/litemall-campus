@@ -2,6 +2,7 @@ package org.linlinjava.litemall.wx.web;
 
 import org.linlinjava.litemall.core.util.ResponseUtil;
 import org.linlinjava.litemall.db.domain.SicauReport;
+import org.linlinjava.litemall.db.domain.SicauReportWithBLOBs;
 import org.linlinjava.litemall.db.service.SicauReportService;
 import org.linlinjava.litemall.wx.annotation.LoginUser;
 import org.springframework.web.bind.annotation.*;
@@ -22,15 +23,15 @@ public class WxSicauReportController {
     @Resource
     private SicauReportService reportService;
 
-    /**
+        /**
      * 提交举报
      * 
-     * @param userId 登录用户ID
+     * @param userId 用户ID
      * @param report 举报信息
      * @return 提交结果
      */
     @PostMapping("submit")
-    public Object submit(@LoginUser Integer userId, @RequestBody SicauReport report) {
+    public Object submit(@LoginUser Integer userId, @RequestBody SicauReportWithBLOBs report) {
         if (userId == null) {
             return ResponseUtil.unlogin();
         }
