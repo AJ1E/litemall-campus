@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -136,5 +137,45 @@ public class WxCourierController {
         data.put("isApprovedCourier", isApprovedCourier);
         
         return ResponseUtil.ok(data);
+    }
+
+    /**
+     * 查询待配送订单列表（Story 4.2）
+     * 
+     * GET /wx/courier/pendingOrders
+     * 
+     * 返回数据示例：
+     * {
+     *   "errno": 0,
+     *   "data": [
+     *     {
+     *       "orderId": 123,
+     *       "orderSn": "20250101123456",
+     *       "consignee": "张三",
+     *       "mobile": "138****8000",
+     *       "address": "雅安本部 7舍A栋 501",
+     *       "buildingName": "7舍A栋",
+     *       "distance": 0.85,
+     *       "fee": 2.0,
+     *       "actualPrice": 29.90,
+     *       "addTime": "2025-01-01T12:34:56"
+     *     }
+     *   ]
+     * }
+     */
+    @GetMapping("/pendingOrders")
+    public Object getPendingOrders(@LoginUser Integer userId) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        try {
+            List<Map<String, Object>> orders = courierService.queryPendingOrders(userId);
+            logger.info("快递员 " + userId + " 查询待配送订单，共 " + orders.size() + " 个");
+            return ResponseUtil.ok(orders);
+        } catch (RuntimeException e) {
+            logger.warn("快递员 " + userId + " 查询待配送订单失败: " + e.getMessage());
+            return ResponseUtil.fail(502, e.getMessage());
+        }
     }
 }

@@ -41,11 +41,11 @@
             <!--<property name="suppressAllComments" value="true"/>-->
         </commentGenerator>
 
-        <!--数据库连接信息-->
+        <!--数据库连接信息 - 本地 MariaDB-->
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
-                        connectionURL="jdbc:mysql://gateway01.eu-central-1.prod.aws.tidbcloud.com:4000/litemall?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=Asia/Shanghai&amp;allowPublicKeyRetrieval=true&amp;useSSL=true&amp;requireSSL=true&amp;nullCatalogMeansCurrent=true"
-                        userId="3gw7gessje9T2Cv.root"
-                        password="IWe7WiolqqAMoZ4z"/>
+                        connectionURL="jdbc:mysql://localhost:3306/litemall?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=Asia/Shanghai&amp;allowPublicKeyRetrieval=true&amp;nullCatalogMeansCurrent=true"
+                        userId="litemall"
+                        password="litemall123"/>
 
         <javaTypeResolver>
             <property name="useJSR310Types" value="true"/>
@@ -212,6 +212,9 @@
             <generatedKey column="id" sqlStatement="MySql" identity="true"/>
         </table>
         <table tableName="sicau_courier">
+            <generatedKey column="id" sqlStatement="MySql" identity="true"/>
+        </table>
+        <table tableName="sicau_building">
             <generatedKey column="id" sqlStatement="MySql" identity="true"/>
         </table>
     </context>

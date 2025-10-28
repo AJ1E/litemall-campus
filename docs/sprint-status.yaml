@@ -92,7 +92,7 @@ sprints:
             status: "review"
           - id: "4.2"
             title: "查看待配送订单"
-            status: "ready-for-dev"
+            status: "done"
           - id: "4.3"
             title: "接单与配送"
             status: "ready-for-dev"

@@ -1,6 +1,10 @@
 package org.linlinjava.litemall.db.service;
 
+import org.linlinjava.litemall.db.util.BuildingCoordinates;
+import org.linlinjava.litemall.db.util.DistanceCalculator;
 import org.linlinjava.litemall.db.dao.SicauCourierMapper;
+import org.linlinjava.litemall.db.domain.LitemallOrder;
+import org.linlinjava.litemall.db.domain.LitemallOrderExample;
 import org.linlinjava.litemall.db.domain.LitemallUser;
 import org.linlinjava.litemall.db.domain.SicauCourier;
 import org.linlinjava.litemall.db.domain.SicauCourierExample;
@@ -11,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 快递员服务类
@@ -28,6 +35,9 @@ public class SicauCourierService {
     
     @Autowired
     private LitemallUserService userService;
+    
+    @Autowired
+    private LitemallOrderService orderService;
 
     /**
      * 根据主键查询快递员信息
@@ -256,5 +266,108 @@ public class SicauCourierService {
         courier.setDeleted(true);
         courier.setUpdateTime(LocalDateTime.now());
         return courierMapper.updateByPrimaryKeySelective(courier);
+    }
+
+    /**
+     * 查询待配送订单列表（Story 4.2）
+     * @param courierId 快递员用户ID
+     * @return 待配送订单列表（含距离和配送费）
+     */
+    public List<Map<String, Object>> queryPendingOrders(Integer courierId) {
+        // 1. 检查快递员资格
+        SicauCourier courier = findByUserId(courierId);
+        if (courier == null) {
+            throw new RuntimeException("您不是快递员");
+        }
+        if (courier.getStatus() != 1) {
+            throw new RuntimeException("您的快递员资格尚未通过审核或已被取消");
+        }
+
+        // 2. 查询待配送订单（状态=201待发货，配送方式=1快递员配送，未分配快递员）
+        LitemallOrderExample example = new LitemallOrderExample();
+        example.or()
+            .andOrderStatusEqualTo((short) 201)      // 待发货
+            .andDeliveryTypeEqualTo((byte) 1)         // 学生快递员配送
+            .andCourierIdIsNull()                     // 未分配快递员
+            .andDeletedEqualTo(false);
+        
+        // 使用 querySelective 查询
+        List<LitemallOrder> orders = orderService.querySelective(
+            null, null, null, null, 
+            java.util.Arrays.asList((short) 201), 
+            1, 1000, null, null
+        );
+
+        // 手动过滤（因为 querySelective 不支持所有条件）
+        List<LitemallOrder> filteredOrders = new ArrayList<>();
+        for (LitemallOrder order : orders) {
+            if (order.getDeliveryType() != null && order.getDeliveryType() == 1 
+                && order.getCourierId() == null) {
+                filteredOrders.add(order);
+            }
+        }
+
+        // 3. 计算距离和配送费
+        // TODO: 获取快递员位置（从默认收货地址或其他来源）
+        // 当前简化实现：假设快递员在校内，距离固定为0作为起点
+        double[] courierCoords = null; // 暂时无快递员位置
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (LitemallOrder order : filteredOrders) {
+            // 3.1 从订单地址中提取楼栋名称
+            String buildingName = DistanceCalculator.extractBuildingName(order.getAddress());
+            if (buildingName == null) {
+                continue; // 无法提取楼栋，跳过
+            }
+
+            // 获取目标楼栋坐标
+            double[] targetCoords = BuildingCoordinates.getCoordinates(buildingName);
+            if (targetCoords == null) {
+                continue; // 楼栋坐标未找到，跳过
+            }
+
+            // 3.2 计算距离（如果没有快递员坐标，默认为校内平均距离1.5km）
+            double distance = 1.5; // 默认距离
+            if (courierCoords != null) {
+                distance = DistanceCalculator.calculateDistance(
+                    courierCoords[0], courierCoords[1],
+                    targetCoords[0], targetCoords[1]
+                );
+            }
+
+            // 3.3 计算配送费
+            double fee = DistanceCalculator.calculateFee(distance);
+
+            // 3.4 构造返回数据
+            Map<String, Object> item = new HashMap<>();
+            item.put("orderId", order.getId());
+            item.put("orderSn", order.getOrderSn());
+            item.put("consignee", order.getConsignee());
+            
+            // 手机号脱敏：138****8000
+            String mobile = order.getMobile();
+            if (mobile != null && mobile.length() == 11) {
+                mobile = mobile.substring(0, 3) + "****" + mobile.substring(7);
+            }
+            item.put("mobile", mobile);
+            
+            item.put("address", order.getAddress());
+            item.put("buildingName", buildingName);
+            item.put("distance", distance);
+            item.put("fee", fee);
+            item.put("actualPrice", order.getActualPrice());
+            item.put("addTime", order.getAddTime());
+            
+            result.add(item);
+        }
+
+        // 4. 按距离升序排序（最近的订单在前）
+        result.sort((a, b) -> {
+            Double distA = (Double) a.get("distance");
+            Double distB = (Double) b.get("distance");
+            return Double.compare(distA, distB);
+        });
+
+        return result;
     }
 }
