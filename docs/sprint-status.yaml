@@ -107,20 +107,20 @@ sprints:
 
       - id: 5
         title: "限时拍卖模块"
-        status: "contexted"
+        status: "completed"
         stories:
           - id: "5.1"
             title: "发起拍卖"
-            status: "ready-for-dev"
+            status: "done"
           - id: "5.2"
             title: "参与竞拍"
-            status: "ready-for-dev"
+            status: "done"
           - id: "5.3"
             title: "拍卖结算"
-            status: "ready-for-dev"
+            status: "done"
           - id: "5.4"
             title: "拍卖数据统计"
-            status: "ready-for-dev"
+            status: "done"
         retrospective:
           status: "optional"
 
