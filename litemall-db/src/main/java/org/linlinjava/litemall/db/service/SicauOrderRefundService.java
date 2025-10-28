@@ -132,6 +132,30 @@ public class SicauOrderRefundService {
     }
     
     /**
+     * 更新退款状态（含管理员备注）
+     * 
+     * @param id 退款记录ID
+     * @param refundStatus 新状态
+     * @param adminNote 管理员备注
+     * @return 影响行数
+     */
+    @Transactional
+    public int updateRefundStatusWithNote(Integer id, Byte refundStatus, String adminNote) {
+        SicauOrderRefund refund = new SicauOrderRefund();
+        refund.setId(id);
+        refund.setRefundStatus(refundStatus);
+        refund.setAdminNote(adminNote);
+        
+        // 若状态变更为"退款成功"，记录退款完成时间
+        if (refundStatus == 2) {
+            refund.setRefundTime(LocalDateTime.now());
+        }
+        
+        refund.setUpdateTime(LocalDateTime.now());
+        return refundMapper.updateByPrimaryKeySelective(refund);
+    }
+    
+    /**
      * 确认退款（记录第三方退款ID）
      * 
      * @param id 退款记录ID

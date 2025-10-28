@@ -83,8 +83,14 @@ public class AdminSicauRefundController {
             return ResponseUtil.fail(600, "该退款申请已处理，不可重复审核");
         }
         
-        // TODO: 如需记录 adminNote，需在 Service 中扩展或在 domain 中添加字段
-        int rows = refundService.updateRefundStatus(id, status);
+        // 更新状态并保存管理员备注
+        int rows;
+        if (adminNote != null && !adminNote.trim().isEmpty()) {
+            rows = refundService.updateRefundStatusWithNote(id, status, adminNote);
+        } else {
+            rows = refundService.updateRefundStatus(id, status);
+        }
+        
         if (rows <= 0) {
             return ResponseUtil.fail();
         }

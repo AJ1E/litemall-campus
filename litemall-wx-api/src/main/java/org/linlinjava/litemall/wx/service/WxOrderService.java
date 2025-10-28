@@ -84,6 +84,8 @@ public class WxOrderService {
     @Autowired
     private LitemallGoodsProductService productService;
     @Autowired
+    private LitemallGoodsService litemallGoodsService;
+    @Autowired
     private WxPayService wxPayService;
     @Autowired
     private NotifyService notifyService;
@@ -259,6 +261,12 @@ public class WxOrderService {
         String message = JacksonUtil.parseString(body, "message");
         Integer grouponRulesId = JacksonUtil.parseInteger(body, "grouponRulesId");
         Integer grouponLinkId = JacksonUtil.parseInteger(body, "grouponLinkId");
+        
+        // Epic 3 Story 3.5: 自提功能 - 获取配送方式
+        Integer deliveryType = JacksonUtil.parseInteger(body, "deliveryType");
+        if (deliveryType == null) {
+            deliveryType = 1; // 默认学生快递员配送
+        }
 
         //如果是团购项目,验证活动是否有效
         if (grouponRulesId != null && grouponRulesId > 0) {
@@ -391,6 +399,24 @@ public class WxOrderService {
             order.setGrouponPrice(grouponPrice);    //  团购价格
         } else {
             order.setGrouponPrice(new BigDecimal(0));    //  团购价格
+        }
+        
+        // Epic 3 Story 3.5: 自提功能 - 设置配送方式和生成取件码
+        order.setDeliveryType(deliveryType.byteValue());
+        if (deliveryType == 2) {
+            // 自提方式，生成4位随机取件码
+            String pickupCode = String.format("%04d", (int)(Math.random() * 10000));
+            order.setPickupCode(pickupCode);
+            logger.info("生成自提取件码: orderSn=" + order.getOrderSn() + ", pickupCode=" + pickupCode);
+        }
+        
+        // 获取卖家ID（从购物车商品中获取）
+        if (!checkedGoodsList.isEmpty()) {
+            Integer goodsId = checkedGoodsList.get(0).getGoodsId();
+            LitemallGoods goods = litemallGoodsService.findById(goodsId);
+            if (goods != null) {
+                order.setSellerId(goods.getUserId());
+            }
         }
 
         // 添加订单表项

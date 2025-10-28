@@ -8,8 +8,12 @@ import com.github.binarywang.wxpay.exception.WxPayException;
 import com.github.binarywang.wxpay.service.WxPayService;
 import org.linlinjava.litemall.core.notify.NotifyService;
 import org.linlinjava.litemall.core.notify.NotifyType;
+import org.linlinjava.litemall.db.domain.LitemallGoods;
 import org.linlinjava.litemall.db.domain.LitemallOrder;
+import org.linlinjava.litemall.db.domain.LitemallOrderGoods;
 import org.linlinjava.litemall.db.domain.LitemallUser;
+import org.linlinjava.litemall.db.service.LitemallGoodsService;
+import org.linlinjava.litemall.db.service.LitemallOrderGoodsService;
 import org.linlinjava.litemall.db.service.LitemallOrderService;
 import org.linlinjava.litemall.db.service.LitemallUserService;
 import org.slf4j.Logger;
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 微信支付服务
@@ -44,6 +49,12 @@ public class WxOrderPayService {
     
     @Autowired
     private LitemallUserService userService;
+    
+    @Autowired
+    private LitemallGoodsService goodsService;
+    
+    @Autowired
+    private LitemallOrderGoodsService orderGoodsService;
     
     @Autowired
     private NotifyService notifyService;
@@ -122,8 +133,19 @@ public class WxOrderPayService {
             order.setPayTime(LocalDateTime.now());
             orderService.updateWithOptimisticLocker(order);
             
-            // 6. 扣减商品库存（如果有库存管理）
-            // TODO: 实现库存扣减逻辑
+            // 6. 将商品状态设置为"已售出"（二手商品唯一性）
+            List<LitemallOrderGoods> orderGoodsList = orderGoodsService.queryByOid(order.getId());
+            for (LitemallOrderGoods orderGoods : orderGoodsList) {
+                LitemallGoods goods = goodsService.findById(orderGoods.getGoodsId());
+                if (goods != null) {
+                    // 将商品下架（is_on_sale=false）并标记状态为已售出（status=2）
+                    goods.setIsOnSale(false);
+                    goods.setStatus((byte) 2); // 2=已售出
+                    goodsService.updateById(goods);
+                    
+                    logger.info("商品已售出: goodsId={}, goodsName={}", goods.getId(), goods.getName());
+                }
+            }
             
             // 7. 推送通知给卖家
             LitemallUser seller = userService.findById(order.getSellerId());
