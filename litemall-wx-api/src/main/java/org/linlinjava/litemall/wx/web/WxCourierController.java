@@ -178,4 +178,95 @@ public class WxCourierController {
             return ResponseUtil.fail(502, e.getMessage());
         }
     }
+
+    /**
+     * 接单（Story 4.3）
+     * 
+     * POST /wx/courier/acceptOrder
+     * {
+     *   "orderId": 123
+     * }
+     * 
+     * 返回数据：
+     * {
+     *   "errno": 0,
+     *   "data": {
+     *     "pickupCode": "3857",
+     *     "orderSn": "20251028001",
+     *     "consignee": "张三",
+     *     "mobile": "138****8000",
+     *     "address": "7舍A栋 501",
+     *     "shipTime": "2025-10-28T15:30:00"
+     *   }
+     * }
+     */
+    @PostMapping("/acceptOrder")
+    public Object acceptOrder(@LoginUser Integer userId, @RequestBody Map<String, Integer> body) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        Integer orderId = body.get("orderId");
+        if (orderId == null) {
+            return ResponseUtil.badArgument("订单ID不能为空");
+        }
+
+        try {
+            Map<String, Object> result = courierService.acceptOrder(userId, orderId);
+            logger.info("快递员 " + userId + " 接单成功: orderId=" + orderId + 
+                       ", pickupCode=" + result.get("pickupCode"));
+            return ResponseUtil.ok(result);
+        } catch (RuntimeException e) {
+            logger.warn("快递员 " + userId + " 接单失败: " + e.getMessage());
+            return ResponseUtil.fail(503, e.getMessage());
+        }
+    }
+
+    /**
+     * 完成配送（Story 4.3）
+     * 
+     * POST /wx/courier/completeOrder
+     * {
+     *   "orderId": 123,
+     *   "pickupCode": "3857"
+     * }
+     * 
+     * 返回数据：
+     * {
+     *   "errno": 0,
+     *   "data": {
+     *     "income": 4.0,
+     *     "distance": 1.5,
+     *     "orderSn": "20251028001",
+     *     "totalOrders": 5,
+     *     "totalIncome": 20.0
+     *   }
+     * }
+     */
+    @PostMapping("/completeOrder")
+    public Object completeOrder(@LoginUser Integer userId, @RequestBody Map<String, Object> body) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        Integer orderId = (Integer) body.get("orderId");
+        String pickupCode = (String) body.get("pickupCode");
+        
+        if (orderId == null) {
+            return ResponseUtil.badArgument("订单ID不能为空");
+        }
+        if (pickupCode == null || pickupCode.trim().isEmpty()) {
+            return ResponseUtil.badArgument("取件码不能为空");
+        }
+
+        try {
+            Map<String, Object> result = courierService.completeOrder(userId, orderId, pickupCode);
+            logger.info("快递员 " + userId + " 完成配送: orderId=" + orderId + 
+                       ", income=" + result.get("income"));
+            return ResponseUtil.ok(result);
+        } catch (RuntimeException e) {
+            logger.warn("快递员 " + userId + " 完成配送失败: " + e.getMessage());
+            return ResponseUtil.fail(504, e.getMessage());
+        }
+    }
 }

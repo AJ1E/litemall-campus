@@ -217,5 +217,8 @@
         <table tableName="sicau_building">
             <generatedKey column="id" sqlStatement="MySql" identity="true"/>
         </table>
+        <table tableName="sicau_courier_income">
+            <generatedKey column="id" sqlStatement="MySql" identity="true"/>
+        </table>
     </context>
 </generatorConfiguration>

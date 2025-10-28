@@ -38,6 +38,9 @@ public class SicauCourierService {
     
     @Autowired
     private LitemallOrderService orderService;
+    
+    @Autowired
+    private SicauCourierIncomeService incomeService;
 
     /**
      * 根据主键查询快递员信息
@@ -367,6 +370,155 @@ public class SicauCourierService {
             Double distB = (Double) b.get("distance");
             return Double.compare(distA, distB);
         });
+
+        return result;
+    }
+
+    /**
+     * 接单（Story 4.3）
+     * @param courierId 快递员用户ID
+     * @param orderId 订单ID
+     * @return 订单详情（含取件码）
+     */
+    @Transactional
+    public Map<String, Object> acceptOrder(Integer courierId, Integer orderId) {
+        // 1. 检查快递员资格
+        SicauCourier courier = findByUserId(courierId);
+        if (courier == null) {
+            throw new RuntimeException("您不是快递员");
+        }
+        if (courier.getStatus() != 1) {
+            throw new RuntimeException("您的快递员资格未通过审核或已被取消");
+        }
+
+        // 2. 查询订单
+        LitemallOrder order = orderService.findById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+
+        // 3. 检查订单状态
+        if (order.getOrderStatus() != 201) {
+            throw new RuntimeException("订单状态不正确（必须是待发货）");
+        }
+        if (order.getDeliveryType() != 1) {
+            throw new RuntimeException("该订单不是学生快递员配送方式");
+        }
+        if (order.getCourierId() != null) {
+            throw new RuntimeException("该订单已被其他快递员接取");
+        }
+
+        // 4. 生成4位取件码
+        String pickupCode = String.format("%04d", (int)(Math.random() * 10000));
+
+        // 5. 更新订单
+        order.setCourierId(courierId);
+        order.setOrderStatus((short) 301); // 待收货
+        order.setShipTime(LocalDateTime.now());
+        order.setPickupCode(pickupCode);
+        
+        int updated = orderService.updateWithOptimisticLocker(order);
+        if (updated == 0) {
+            throw new RuntimeException("订单已被其他快递员接取");
+        }
+
+        // 6. TODO: 发送通知给买家（包含取件码）
+        // notifyService.notifyBuyer(order.getUserId(), "您的订单已由快递员接单，取件码：" + pickupCode);
+
+        // 7. 构造返回数据
+        Map<String, Object> result = new HashMap<>();
+        result.put("pickupCode", pickupCode);
+        result.put("orderSn", order.getOrderSn());
+        result.put("consignee", order.getConsignee());
+        
+        // 手机号脱敏
+        String mobile = order.getMobile();
+        if (mobile != null && mobile.length() == 11) {
+            mobile = mobile.substring(0, 3) + "****" + mobile.substring(7);
+        }
+        result.put("mobile", mobile);
+        
+        result.put("address", order.getAddress());
+        result.put("shipTime", order.getShipTime());
+
+        return result;
+    }
+
+    /**
+     * 完成配送（Story 4.3）
+     * @param courierId 快递员用户ID
+     * @param orderId 订单ID
+     * @param pickupCode 买家提供的取件码
+     * @return 收入信息
+     */
+    @Transactional
+    public Map<String, Object> completeOrder(Integer courierId, Integer orderId, String pickupCode) {
+        // 1. 查询订单
+        LitemallOrder order = orderService.findById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+
+        // 2. 检查订单归属
+        if (order.getCourierId() == null || !order.getCourierId().equals(courierId)) {
+            throw new RuntimeException("这不是您接的订单");
+        }
+
+        // 3. 检查订单状态
+        if (order.getOrderStatus() != 301) {
+            throw new RuntimeException("订单状态不正确（必须是待收货）");
+        }
+
+        // 4. 验证取件码
+        if (order.getPickupCode() == null || !order.getPickupCode().equals(pickupCode)) {
+            throw new RuntimeException("取件码错误");
+        }
+
+        // 5. 计算配送距离和费用
+        String buildingName = DistanceCalculator.extractBuildingName(order.getAddress());
+        double[] coords = BuildingCoordinates.getCoordinates(buildingName);
+        
+        // 默认距离1.5km（如果无法计算）
+        double distance = 1.5;
+        if (coords != null) {
+            // TODO: 获取快递员起点坐标后可精确计算
+            // 暂时使用默认距离
+        }
+        
+        double fee = DistanceCalculator.calculateFee(distance);
+
+        // 6. 更新订单状态
+        order.setOrderStatus((short) 401); // 已收货
+        order.setConfirmTime(LocalDateTime.now());
+        orderService.updateWithOptimisticLocker(order);
+
+        // 7. 记录收入流水
+        incomeService.addIncome(
+            courierId, 
+            orderId, 
+            java.math.BigDecimal.valueOf(fee), 
+            java.math.BigDecimal.valueOf(distance)
+        );
+
+        // 8. 更新快递员统计
+        SicauCourier courier = findByUserId(courierId);
+        courier.setTotalOrders(courier.getTotalOrders() + 1);
+        courier.setTotalIncome(
+            courier.getTotalIncome().add(java.math.BigDecimal.valueOf(fee))
+        );
+        courier.setUpdateTime(LocalDateTime.now());
+        updateById(courier);
+
+        // 9. TODO: 通知买家确认收货
+        // notifyService.notifyBuyer(order.getUserId(), "您的订单已送达，感谢使用学生快递员服务");
+
+        // 10. 构造返回数据
+        Map<String, Object> result = new HashMap<>();
+        result.put("income", fee);
+        result.put("distance", distance);
+        result.put("orderSn", order.getOrderSn());
+        result.put("totalOrders", courier.getTotalOrders());
+        result.put("totalIncome", courier.getTotalIncome());
 
         return result;
     }
