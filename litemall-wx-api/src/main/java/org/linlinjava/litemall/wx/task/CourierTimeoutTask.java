@@ -8,6 +8,7 @@ import org.linlinjava.litemall.db.domain.SicauCourier;
 import org.linlinjava.litemall.db.service.LitemallOrderService;
 import org.linlinjava.litemall.db.service.LitemallUserService;
 import org.linlinjava.litemall.db.service.SicauCourierService;
+import org.linlinjava.litemall.wx.service.CourierNotifyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -32,6 +33,9 @@ public class CourierTimeoutTask {
     
     @Autowired
     private LitemallUserService userService;
+    
+    @Autowired
+    private CourierNotifyService notifyService;
     
     /**
      * 每 10 分钟扫描一次超时配送
@@ -109,17 +113,25 @@ public class CourierTimeoutTask {
                 
                 logger.warn(String.format("快递员 %d 因配送超时 3 次，已取消资格", courierId));
                 
-                // TODO: 推送通知
-                // notifyService.notify(courierId, "因配送超时3次，您的快递员资格已被取消");
+                // 发送取消资格通知
+                try {
+                    notifyService.notifyCourierTimeout(courierId, order.getId(), 
+                        courier.getTimeoutCount(), 10);
+                } catch (Exception e) {
+                    // 通知失败不影响主流程
+                }
             } else {
                 courierService.updateById(courier);
                 
                 logger.info(String.format("快递员 %d 超时次数: %d/3", courierId, courier.getTimeoutCount()));
                 
-                // TODO: 推送警告
-                // String message = String.format("订单 %s 配送超时，已扣除 10 积分，再超时 %d 次将取消资格", 
-                //     order.getOrderSn(), 3 - courier.getTimeoutCount());
-                // notifyService.notify(courierId, message);
+                // 发送超时警告通知
+                try {
+                    notifyService.notifyCourierTimeout(courierId, order.getId(), 
+                        courier.getTimeoutCount(), 10);
+                } catch (Exception e) {
+                    // 通知失败不影响主流程
+                }
             }
             
             // 4. 释放订单（回到待配送列表）

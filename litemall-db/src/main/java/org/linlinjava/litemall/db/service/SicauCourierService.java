@@ -8,12 +8,15 @@ import org.linlinjava.litemall.db.domain.LitemallOrderExample;
 import org.linlinjava.litemall.db.domain.LitemallUser;
 import org.linlinjava.litemall.db.domain.SicauCourier;
 import org.linlinjava.litemall.db.domain.SicauCourierExample;
+import org.linlinjava.litemall.db.domain.SicauCourierIncome;
+import org.linlinjava.litemall.db.domain.SicauCourierWithdraw;
 import org.linlinjava.litemall.db.domain.SicauStudentAuth;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,6 +44,9 @@ public class SicauCourierService {
     
     @Autowired
     private SicauCourierIncomeService incomeService;
+    
+    @Autowired
+    private SicauCourierWithdrawService withdrawService;
 
     /**
      * 根据主键查询快递员信息
@@ -422,8 +428,7 @@ public class SicauCourierService {
             throw new RuntimeException("订单已被其他快递员接取");
         }
 
-        // 6. TODO: 发送通知给买家（包含取件码）
-        // notifyService.notifyBuyer(order.getUserId(), "您的订单已由快递员接单，取件码：" + pickupCode);
+        // 6. 通知将由 Controller 层调用 CourierNotifyService 完成
 
         // 7. 构造返回数据
         Map<String, Object> result = new HashMap<>();
@@ -509,8 +514,7 @@ public class SicauCourierService {
         courier.setUpdateTime(LocalDateTime.now());
         updateById(courier);
 
-        // 9. TODO: 通知买家确认收货
-        // notifyService.notifyBuyer(order.getUserId(), "您的订单已送达，感谢使用学生快递员服务");
+        // 9. 通知将由 Controller 层调用 CourierNotifyService 完成
 
         // 10. 构造返回数据
         Map<String, Object> result = new HashMap<>();
@@ -522,4 +526,114 @@ public class SicauCourierService {
 
         return result;
     }
+    
+    /**
+     * 获取收入统计
+     * 
+     * @param courierId 快递员用户ID
+     * @return 收入统计数据
+     */
+    public Map<String, Object> getIncomeStats(Integer courierId) {
+        SicauCourier courier = findByUserId(courierId);
+        if (courier == null) {
+            throw new RuntimeException("您还不是快递员");
+        }
+        
+        // 1. 总收入和总订单数（来自快递员表）
+        BigDecimal totalIncome = courier.getTotalIncome() != null ? courier.getTotalIncome() : BigDecimal.ZERO;
+        Integer totalOrders = courier.getTotalOrders() != null ? courier.getTotalOrders() : 0;
+        
+        // 2. 已提现金额（包括待处理和已到账）
+        BigDecimal totalWithdrawn = withdrawService.getTotalWithdrawn(courierId);
+        
+        // 3. 可提现余额 = 总收入 - 已提现
+        BigDecimal availableBalance = totalIncome.subtract(totalWithdrawn);
+        
+        // 4. 最近10条收入记录
+        List<SicauCourierIncome> recentIncomes = incomeService.findByCourierId(courierId);
+        List<Map<String, Object>> incomeList = new ArrayList<>();
+        
+        int limit = Math.min(10, recentIncomes.size());
+        for (int i = 0; i < limit; i++) {
+            SicauCourierIncome income = recentIncomes.get(i);
+            Map<String, Object> incomeData = new HashMap<>();
+            incomeData.put("orderId", income.getOrderId());
+            incomeData.put("income", income.getIncomeAmount());
+            incomeData.put("distance", income.getDistance());
+            incomeData.put("addTime", income.getAddTime());
+            incomeList.add(incomeData);
+        }
+        
+        // 5. 最近提现记录
+        List<SicauCourierWithdraw> withdraws = withdrawService.findByCourierId(courierId);
+        List<Map<String, Object>> withdrawList = new ArrayList<>();
+        
+        int withdrawLimit = Math.min(5, withdraws.size());
+        for (int i = 0; i < withdrawLimit; i++) {
+            SicauCourierWithdraw withdraw = withdraws.get(i);
+            Map<String, Object> withdrawData = new HashMap<>();
+            withdrawData.put("withdrawSn", withdraw.getWithdrawSn());
+            withdrawData.put("amount", withdraw.getWithdrawAmount());
+            withdrawData.put("status", withdraw.getStatus());
+            withdrawData.put("addTime", withdraw.getAddTime());
+            withdrawList.add(withdrawData);
+        }
+        
+        // 构造返回结果
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalIncome", totalIncome);
+        result.put("totalOrders", totalOrders);
+        result.put("totalWithdrawn", totalWithdrawn);
+        result.put("availableBalance", availableBalance);
+        result.put("recentIncomes", incomeList);
+        result.put("recentWithdraws", withdrawList);
+        
+        return result;
+    }
+    
+    /**
+     * 申请提现
+     * 
+     * @param courierId 快递员用户ID
+     * @param amount 提现金额
+     * @return 提现单号
+     */
+    @Transactional
+    public String withdraw(Integer courierId, BigDecimal amount) {
+        SicauCourier courier = findByUserId(courierId);
+        if (courier == null) {
+            throw new RuntimeException("您还不是快递员");
+        }
+        
+        if (courier.getStatus() != 1) {
+            throw new RuntimeException("您的快递员资格已被取消或待审核，无法提现");
+        }
+        
+        // 验证提现金额
+        if (amount.compareTo(new BigDecimal("10.00")) < 0) {
+            throw new RuntimeException("提现金额不能低于 10 元");
+        }
+        
+        // 计算可用余额
+        BigDecimal totalIncome = courier.getTotalIncome() != null ? courier.getTotalIncome() : BigDecimal.ZERO;
+        BigDecimal totalWithdrawn = withdrawService.getTotalWithdrawn(courierId);
+        BigDecimal availableBalance = totalIncome.subtract(totalWithdrawn);
+        
+        if (amount.compareTo(availableBalance) > 0) {
+            throw new RuntimeException(String.format("余额不足，当前可提现金额: %.2f 元", availableBalance));
+        }
+        
+        // 计算手续费（暂不收取，设为0）
+        BigDecimal feeAmount = BigDecimal.ZERO;
+        
+        // 创建提现记录
+        SicauCourierWithdraw withdraw = withdrawService.createWithdraw(courierId, amount, feeAmount);
+        
+        // TODO: 调用微信企业付款 API
+        // 当前仅创建记录，状态为待处理（status=0）
+        // 生产环境需要集成微信企业付款接口
+        
+        return withdraw.getWithdrawSn();
+    }
 }
+

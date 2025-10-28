@@ -3,14 +3,19 @@ package org.linlinjava.litemall.wx.web;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.linlinjava.litemall.core.util.ResponseUtil;
+import org.linlinjava.litemall.db.domain.LitemallOrder;
+import org.linlinjava.litemall.db.domain.LitemallUser;
 import org.linlinjava.litemall.db.domain.SicauCourier;
+import org.linlinjava.litemall.db.service.LitemallOrderService;
+import org.linlinjava.litemall.db.service.LitemallUserService;
 import org.linlinjava.litemall.db.service.SicauCourierService;
 import org.linlinjava.litemall.wx.annotation.LoginUser;
+import org.linlinjava.litemall.wx.service.CourierNotifyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +31,15 @@ public class WxCourierController {
 
     @Autowired
     private SicauCourierService courierService;
+    
+    @Autowired
+    private CourierNotifyService notifyService;
+    
+    @Autowired
+    private LitemallUserService userService;
+    
+    @Autowired
+    private LitemallOrderService orderService;
 
     /**
      * 申请成为快递员
@@ -215,6 +229,19 @@ public class WxCourierController {
             Map<String, Object> result = courierService.acceptOrder(userId, orderId);
             logger.info("快递员 " + userId + " 接单成功: orderId=" + orderId + 
                        ", pickupCode=" + result.get("pickupCode"));
+            
+            // 发送接单通知给买家
+            try {
+                LitemallOrder order = orderService.findById(orderId);
+                LitemallUser courierUser = userService.findById(userId);
+                String courierName = courierUser != null ? courierUser.getNickname() : null;
+                String pickupCode = (String) result.get("pickupCode");
+                notifyService.notifyBuyerOrderAccepted(order.getUserId(), orderId, pickupCode, courierName);
+            } catch (Exception e) {
+                // 通知失败不影响主流程
+                logger.warn("发送接单通知失败: " + e.getMessage());
+            }
+            
             return ResponseUtil.ok(result);
         } catch (RuntimeException e) {
             logger.warn("快递员 " + userId + " 接单失败: " + e.getMessage());
@@ -263,10 +290,114 @@ public class WxCourierController {
             Map<String, Object> result = courierService.completeOrder(userId, orderId, pickupCode);
             logger.info("快递员 " + userId + " 完成配送: orderId=" + orderId + 
                        ", income=" + result.get("income"));
+            
+            // 发送配送完成通知给买家
+            try {
+                LitemallOrder order = orderService.findById(orderId);
+                LitemallUser courierUser = userService.findById(userId);
+                String courierName = courierUser != null ? courierUser.getNickname() : null;
+                notifyService.notifyBuyerOrderDelivered(order.getUserId(), orderId, courierName);
+            } catch (Exception e) {
+                // 通知失败不影响主流程
+                logger.warn("发送配送完成通知失败: " + e.getMessage());
+            }
+            
             return ResponseUtil.ok(result);
         } catch (RuntimeException e) {
             logger.warn("快递员 " + userId + " 完成配送失败: " + e.getMessage());
             return ResponseUtil.fail(504, e.getMessage());
+        }
+    }
+    
+    /**
+     * 收入统计（Story 4.5）
+     * 
+     * GET /wx/courier/income
+     * 
+     * 返回数据：
+     * {
+     *   "errno": 0,
+     *   "data": {
+     *     "totalIncome": 120.50,
+     *     "totalOrders": 25,
+     *     "totalWithdrawn": 20.00,
+     *     "availableBalance": 100.50,
+     *     "recentIncomes": [...],
+     *     "recentWithdraws": [...]
+     *   }
+     * }
+     */
+    @GetMapping("/income")
+    public Object getIncome(@LoginUser Integer userId) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        try {
+            Map<String, Object> stats = courierService.getIncomeStats(userId);
+            logger.info("快递员 " + userId + " 查询收入统计");
+            return ResponseUtil.ok(stats);
+        } catch (RuntimeException e) {
+            logger.warn("快递员 " + userId + " 查询收入统计失败: " + e.getMessage());
+            return ResponseUtil.fail(505, e.getMessage());
+        }
+    }
+    
+    /**
+     * 申请提现（Story 4.5）
+     * 
+     * POST /wx/courier/withdraw
+     * {
+     *   "amount": 100.00
+     * }
+     * 
+     * 返回数据：
+     * {
+     *   "errno": 0,
+     *   "data": {
+     *     "withdrawSn": "WD20251028103045001"
+     *   }
+     * }
+     */
+    @PostMapping("/withdraw")
+    public Object withdraw(@LoginUser Integer userId, @RequestBody Map<String, Object> body) {
+        if (userId == null) {
+            return ResponseUtil.unlogin();
+        }
+
+        Object amountObj = body.get("amount");
+        if (amountObj == null) {
+            return ResponseUtil.badArgument("提现金额不能为空");
+        }
+        
+        BigDecimal amount;
+        try {
+            if (amountObj instanceof Integer) {
+                amount = new BigDecimal((Integer) amountObj);
+            } else if (amountObj instanceof Double) {
+                amount = BigDecimal.valueOf((Double) amountObj);
+            } else if (amountObj instanceof String) {
+                amount = new BigDecimal((String) amountObj);
+            } else {
+                return ResponseUtil.badArgument("提现金额格式错误");
+            }
+        } catch (NumberFormatException e) {
+            return ResponseUtil.badArgument("提现金额格式错误");
+        }
+
+        try {
+            String withdrawSn = courierService.withdraw(userId, amount);
+            logger.info("快递员 " + userId + " 申请提现: amount=" + amount + 
+                       ", withdrawSn=" + withdrawSn);
+            
+            Map<String, String> result = new HashMap<>();
+            result.put("withdrawSn", withdrawSn);
+            result.put("message", "提现申请已提交，1-3个工作日到账");
+            
+            return ResponseUtil.ok(result);
+        } catch (RuntimeException e) {
+            logger.warn("快递员 " + userId + " 申请提现失败: " + e.getMessage());
+            return ResponseUtil.fail(506, e.getMessage());
         }
     }
 }

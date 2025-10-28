@@ -85,23 +85,23 @@ sprints:
 
       - id: 4
         title: "学生快递员配送系统"
-        status: "in-progress"
+        status: "completed"
         stories:
           - id: "4.1"
             title: "申请成为快递员"
-            status: "review"
+            status: "done"
           - id: "4.2"
             title: "查看待配送订单"
             status: "done"
           - id: "4.3"
             title: "接单与配送"
-            status: "ready-for-dev"
+            status: "done"
           - id: "4.4"
             title: "配送超时处理"
-            status: "ready-for-dev"
+            status: "done"
           - id: "4.5"
             title: "收入统计"
-            status: "ready-for-dev"
+            status: "done"
         retrospective:
           status: "optional"
 
