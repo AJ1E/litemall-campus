@@ -126,11 +126,11 @@ sprints:
 
       - id: 6
         title: "公益捐赠通道"
-        status: "contexted"
+        status: "in-progress"
         stories:
           - id: "6.1"
             title: "提交捐赠申请"
-            status: "ready-for-dev"
+            status: "done"
           - id: "6.2"
             title: "管理员审核捐赠"
             status: "ready-for-dev"
